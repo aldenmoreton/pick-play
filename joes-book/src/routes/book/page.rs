@@ -185,7 +185,7 @@ pub async fn leaderboard(
                 tbody {
                     @for (i, rank) in rankings.iter().enumerate() {
                         tr class="bg-white" {
-                            td class="px-6 py-4" {(i+1)}
+                            td class="px-6 py-4" {(i + 1)}
                             td class="px-6 py-4" {
                                 (rank.username)
                                 br;

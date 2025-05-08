@@ -1,6 +1,6 @@
 use axum::extract::{Query, State};
 
-use crate::{db::team::search, AppError, AppStateRef};
+use crate::{db::team::search as db_search, AppError, AppStateRef};
 
 #[derive(Debug, serde::Deserialize)]
 pub struct TeamSearchParams {
@@ -8,7 +8,7 @@ pub struct TeamSearchParams {
     name: String,
 }
 
-pub async fn team(
+pub async fn search(
     State(state): State<AppStateRef>,
     Query(TeamSearchParams { location, name }): Query<TeamSearchParams>,
 ) -> Result<maud::Markup, AppError<'static>> {
@@ -17,7 +17,7 @@ pub async fn team(
     }
 
     let pool = &state.pool;
-    let teams = search(&name, Some(10), pool).await?;
+    let teams = db_search(&name, Some(10), pool).await?;
 
     Ok(crate::templates::team_search::markup(teams, &location))
 }

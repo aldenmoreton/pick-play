@@ -1,10 +1,23 @@
-use axum::response::ErrorResponse;
+use axum::{
+    response::ErrorResponse,
+    routing::{get, post},
+    Router,
+};
 
 use crate::{
     auth::{authz::has_perm, AuthSession},
     db::book::get_books,
-    AppError,
+    AppError, AppStateRef,
 };
+
+use super::session;
+
+#[inline]
+pub fn router() -> Router<AppStateRef> {
+    Router::new()
+        .route("/logout", post(session::logout))
+        .route("/", get(handler))
+}
 
 pub async fn handler(session: AuthSession) -> Result<maud::Markup, ErrorResponse> {
     let user = session.user.ok_or(AppError::BackendUser)?;

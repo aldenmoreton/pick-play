@@ -2,20 +2,17 @@
 // Simply route to the pages under them
 use {
     crate::routes::*,
-    auth::{authz, BackendPgDB},
+    auth::BackendPgDB,
     axum::{
-        handler::Handler,
-        middleware,
-        response::{Html, IntoResponse, Redirect},
-        routing::{get, post},
-        Extension, Router,
+        response::{Html, IntoResponse},
+        routing::get,
+        Router,
     },
     axum_ctx::{RespErr, StatusCode},
     tower_http::services::ServeDir,
 };
 
 pub mod auth;
-pub mod search;
 
 pub mod routes {
     pub mod book;
@@ -24,6 +21,7 @@ pub mod routes {
     pub mod home;
     pub mod session;
     pub mod signup;
+    pub mod team;
 }
 
 pub mod db {
@@ -70,149 +68,21 @@ pub struct GoogleState {
 }
 
 pub fn router() -> Router<AppStateRef> {
-    let site_admin_routes = Router::new().route(
-        "/",
-        get(|| async { Html("<p>You're on the admin page</p>") }),
-    );
-
-    let chapter_home_page =
-        get(
-            |auth_session: auth::AuthSession,
-             Extension(book_subscription): Extension<db::book::BookSubscription>,
-             Extension(chapter): Extension<db::chapter::Chapter>| async move {
-                if chapter.is_open {
-                    chapter::page::open_book(auth_session, &book_subscription, &chapter).await
-                } else {
-                    chapter::page::closed_book(auth_session, &book_subscription, &chapter).await
-                }
-            },
-        )
-        .post(chapter::page::submit.layer(middleware::from_fn(
-            |Extension(chapter): Extension<db::chapter::Chapter>,
-             request,
-             next: middleware::Next| async move {
-                if chapter.is_open {
-                    Ok(next.run(request).await)
-                } else {
-                    Err(AppNotification(
-                        StatusCode::LOCKED,
-                        "This chapter is closed".into(),
-                    ))
-                }
-            },
-        )))
-        .layer(middleware::from_fn(
-            |Extension(chapter): Extension<db::chapter::Chapter>,
-             Extension(book_subscription): Extension<db::book::BookSubscription>,
-             request,
-             next: middleware::Next| async move {
-                match book_subscription.role {
-                    db::book::BookRole::Owner | db::book::BookRole::Admin => {
-                        Ok(next.run(request).await)
-                    }
-                    db::book::BookRole::Participant if chapter.is_visible => {
-                        Ok(next.run(request).await)
-                    }
-                    db::book::BookRole::Guest { chapter_ids }
-                        if chapter.is_visible && chapter_ids.contains(&chapter.chapter_id) =>
-                    {
-                        Ok(next.run(request).await)
-                    }
-                    _ => Err((StatusCode::UNAUTHORIZED, Redirect::to("/"))),
-                }
-            },
-        ));
-
-    let chapter_routes = Router::new()
-        .nest(
-            "/{chapter_id}/admin/",
-            Router::new()
-                .route(
-                    "/",
-                    get(chapter::admin::get)
-                        .post(chapter::admin::post)
-                        .delete(chapter::admin::delete),
-                )
-                .route("/user-input", get(chapter::admin::user_input))
-                .route("/open", post(chapter::admin::open))
-                .route("/visible", post(chapter::admin::visible))
-                .route("/unsubmitted-users", get(chapter::admin::unsubmitted_users)),
-        )
-        .route_layer(middleware::from_fn(book::mw::require_admin))
-        .route("/{chapter_id}/", chapter_home_page)
-        .route_layer(middleware::from_fn(chapter::mw::chapter_ext))
-        .nest(
-            "/create/",
-            Router::new()
-                .route("/", get(chapter::create::get).post(chapter::create::post))
-                .route("/add", get(chapter::create::add_event))
-                .route("/team-select", post(chapter::create::team_select))
-                .route_layer(middleware::from_fn(book::mw::require_admin)),
-        );
-
-    let book_routes = Router::new()
-        .nest("/{book_id}/chapter/", chapter_routes)
-        .nest(
-            "/{book_id}/admin/",
-            Router::new()
-                .route("/", get(book::admin::handler).delete(book::admin::delete))
-                .route("/user-search", get(book::admin::search_user))
-                .route("/add-user", post(book::admin::add_user))
-                .route("/remove-user", post(book::admin::remove_user))
-                .route_layer(middleware::from_fn(book::mw::require_admin)),
-        )
-        .route("/{book_id}/leaderboard", get(book::page::leaderboard))
-        .route("/{book_id}/", get(book::page::handler))
-        .route_layer(middleware::from_fn(book::mw::require_member))
-        .route(
-            "/create",
-            post(book::create::handler).layer(middleware::from_fn(authz::mw::require_site_admin)),
-        );
-
-    let home_routes = Router::new()
-        .route("/logout", post(session::logout))
-        .route("/", get(home::handler));
-
-    let session_routes = Router::new()
-        .route("/api/auth/google", get(session::google::google_oauth))
-        .route(
-            "/finish-signup",
-            get(finish_signup::get).post(finish_signup::post),
-        )
-        // .route(
-        //     "/signup",
-        //     get(crate::signup::signup_page).post(crate::signup::signup_form),
-        // )
-        // .route(
-        //     "/legacy-login",
-        //     get(crate::session::legacy_login_page).post(crate::session::legacy_login_form),
-        // )
-        // .route(
-        //     "/login/explaination",
-        //     get(crate::session::login_explaination),
-        // )
-        .route("/login", get(crate::session::login_page))
-        .route_layer(middleware::from_fn(
-            |auth_session: auth::AuthSession, request, next: middleware::Next| async move {
-                if auth_session.user.is_some() {
-                    return axum::response::Redirect::to("/").into_response();
-                }
-                next.run(request).await.into_response()
-            },
-        ));
+    let site_admin_routes =
+        Router::new().route("/", get(async || Html("<p>You're on the admin page</p>")));
 
     Router::new()
         .nest("/admin", site_admin_routes)
-        .nest("/book", book_routes)
-        .merge(home_routes)
-        .route("/team-search", get(search::team))
+        .nest("/book", book::router())
+        .merge(home::router())
+        .route("/team-search", get(team::search::search))
         // ------------------^ Logged in Routes ^------------------
         .route_layer(axum_login::login_required!(
             BackendPgDB,
             login_url = "/login"
         ))
         .nest_service("/public", ServeDir::new("public"))
-        .merge(session_routes)
+        .merge(session::router())
         .fallback(get((StatusCode::NOT_FOUND, "Could not find your route"))) // TODO: Add funny status page
 }
 

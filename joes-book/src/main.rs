@@ -4,7 +4,9 @@ use joes_book::{auth::BackendPgDB, router, GoogleState};
 #[shuttle_runtime::main]
 pub async fn shuttle(
     #[shuttle_runtime::Secrets] secrets: shuttle_runtime::SecretStore,
-    #[shuttle_shared_db::Postgres(local_uri = "postgres://postgres:postgres@localhost:5432/new2")]
+    #[shuttle_shared_db::Postgres(
+        local_uri = "postgres://postgres:postgres@localhost:5432/joes-book"
+    )]
     pool: sqlx::PgPool,
 ) -> shuttle_axum::ShuttleAxum {
     use axum_login::AuthManagerLayerBuilder;

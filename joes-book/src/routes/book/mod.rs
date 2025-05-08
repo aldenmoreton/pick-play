@@ -1,6 +1,42 @@
+use axum::{
+    middleware,
+    routing::{get, post},
+    Router,
+};
+
+use crate::{auth::authz, AppStateRef};
+
+use super::chapter;
+
 pub mod admin;
 pub mod create;
 pub mod page;
+
+#[inline]
+pub fn router() -> Router<AppStateRef> {
+    Router::new()
+        .nest(
+            "/{book_id}/",
+            Router::new()
+                .nest(
+                    "/admin/",
+                    Router::new()
+                        .route("/", get(admin::handler).delete(admin::delete))
+                        .route("/user-search", get(admin::search_user))
+                        .route("/add-user", post(admin::add_user))
+                        .route("/remove-user", post(admin::remove_user)),
+                )
+                .route_layer(middleware::from_fn(mw::require_admin))
+                .nest("/chapter/", chapter::router())
+                .route("/leaderboard", get(page::leaderboard))
+                .route("/", get(page::handler)),
+        )
+        .route_layer(middleware::from_fn(mw::require_member))
+        .route(
+            "/create",
+            post(create::handler).layer(middleware::from_fn(authz::mw::require_site_admin)),
+        )
+}
 
 pub mod mw {
     use axum::{
@@ -45,7 +81,7 @@ pub mod mw {
                     .into_response();
                 return Err(Redirect::to("/").into());
             }
-            Ok(user) => user,
+            Ok(subscription) => subscription,
         };
 
         request.extensions_mut().insert(book_subscription);

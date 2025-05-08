@@ -2,17 +2,40 @@ use axum::{
     body::Body,
     extract::{Query, State},
     http::{HeaderMap, Response, StatusCode, Uri},
+    middleware,
     response::{ErrorResponse, IntoResponse, Redirect},
-    Form,
+    routing::get,
+    Form, Router,
 };
 use axum_ctx::{RespErr, RespErrCtx, RespErrExt};
 use axum_extra::extract::CookieJar;
 
 use crate::{
-    auth::{AuthSession, LoginCreds, UserCredentials},
+    auth::{self, AuthSession, LoginCreds, UserCredentials},
     templates::base,
     AppError, AppNotification, AppStateRef,
 };
+
+use super::finish_signup;
+
+#[inline]
+pub fn router() -> Router<AppStateRef> {
+    Router::new()
+        .route("/api/auth/google", get(google::google_oauth))
+        .route(
+            "/finish-signup",
+            get(finish_signup::get).post(finish_signup::post),
+        )
+        .route("/login", get(crate::session::login_page))
+        .route_layer(middleware::from_fn(
+            async |auth_session: auth::AuthSession, request, next: middleware::Next| {
+                if auth_session.user.is_some() {
+                    return axum::response::Redirect::to("/").into_response();
+                }
+                next.run(request).await.into_response()
+            },
+        ))
+}
 
 pub async fn login_page(State(state): State<AppStateRef>) -> impl IntoResponse {
     base(
