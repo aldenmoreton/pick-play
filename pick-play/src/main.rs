@@ -1,4 +1,4 @@
-use joes_book::{auth::BackendPgDB, router};
+use pick_play::{auth::BackendPgDB, router};
 
 use axum_login::AuthManagerLayerBuilder;
 use tower_sessions::{cookie::time::Duration, Expiry, SessionManagerLayer};
@@ -9,7 +9,7 @@ use tower_sessions_sqlx_store::PostgresStore;
 pub async fn shuttle(
     #[shuttle_runtime::Secrets] secrets: shuttle_runtime::SecretStore,
     #[shuttle_shared_db::Postgres(
-        local_uri = "postgres://postgres:postgres@localhost:5432/joes-book"
+        local_uri = "postgres://postgres:postgres@localhost:5432/pick-play"
     )]
     pool: sqlx::PgPool,
 ) -> shuttle_axum::ShuttleAxum {
@@ -31,7 +31,7 @@ pub async fn shuttle(
         AuthManagerLayerBuilder::new(backend, session_layer).build()
     };
 
-    let state: joes_book::AppState = {
+    let state: pick_play::AppState = {
         let turnstile_site_key: String = secrets
             .get("TURNSTILE_SITE_KEY")
             .unwrap_or_else(|| "1x00000000000000000000AA".into());
@@ -58,14 +58,14 @@ pub async fn shuttle(
         ))
         .set_redirect_uri(oauth2::RedirectUrl::new(google_redirect_url.clone()).unwrap());
 
-        joes_book::AppState {
+        pick_play::AppState {
             pool,
             requests: reqwest::Client::new(),
-            turnstile: joes_book::TurnstileState {
+            turnstile: pick_play::TurnstileState {
                 site_key: turnstile_site_key,
                 client: cf_turnstile::TurnstileClient::new(turnstile_secret.into()),
             },
-            google: joes_book::GoogleState {
+            google: pick_play::GoogleState {
                 redirect_url: google_redirect_url,
                 oauth: google_oauth,
             },
@@ -108,7 +108,7 @@ async fn main() {
         AuthManagerLayerBuilder::new(backend, session_layer).build()
     };
 
-    let state: joes_book::AppState = {
+    let state: pick_play::AppState = {
         let turnstile_site_key: String = std::env::var("TURNSTILE_SITE_KEY")
             .unwrap_or_else(|_| "1x00000000000000000000AA".into());
 
@@ -132,14 +132,14 @@ async fn main() {
         ))
         .set_redirect_uri(oauth2::RedirectUrl::new(google_redirect_url.clone()).unwrap());
 
-        joes_book::AppState {
+        pick_play::AppState {
             pool,
             requests: reqwest::Client::new(),
-            turnstile: joes_book::TurnstileState {
+            turnstile: pick_play::TurnstileState {
                 site_key: turnstile_site_key,
                 client: cf_turnstile::TurnstileClient::new(turnstile_secret.into()),
             },
-            google: joes_book::GoogleState {
+            google: pick_play::GoogleState {
                 redirect_url: google_redirect_url,
                 oauth: google_oauth,
             },

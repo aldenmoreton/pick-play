@@ -1,6 +1,6 @@
 [workspace]
 
 members = [
-    "joes-book",
+    "pick-play",
     "axum-ctx",
 ]

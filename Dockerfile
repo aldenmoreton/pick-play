@@ -1,5 +1,5 @@
 ARG RUST_VERSION=1.80.1
-ARG APP_NAME=joes-book
+ARG APP_NAME=pick-play
 
 # Build executable
 FROM rust:${RUST_VERSION}-alpine AS build
