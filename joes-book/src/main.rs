@@ -1,4 +1,8 @@
-use joes_book::{auth::BackendPgDB, router, GoogleState};
+use joes_book::{auth::BackendPgDB, router};
+
+use axum_login::AuthManagerLayerBuilder;
+use tower_sessions::{cookie::time::Duration, Expiry, SessionManagerLayer};
+use tower_sessions_sqlx_store::PostgresStore;
 
 #[cfg(feature = "shuttle")]
 #[shuttle_runtime::main]
@@ -9,10 +13,6 @@ pub async fn shuttle(
     )]
     pool: sqlx::PgPool,
 ) -> shuttle_axum::ShuttleAxum {
-    use axum_login::AuthManagerLayerBuilder;
-    use tower_sessions::{cookie::time::Duration, Expiry, SessionManagerLayer};
-    use tower_sessions_sqlx_store::PostgresStore;
-
     let auth_layer = {
         let backend = BackendPgDB(pool.clone());
         backend.init_admin().await.ok();
@@ -65,7 +65,7 @@ pub async fn shuttle(
                 site_key: turnstile_site_key,
                 client: cf_turnstile::TurnstileClient::new(turnstile_secret.into()),
             },
-            google: GoogleState {
+            google: joes_book::GoogleState {
                 redirect_url: google_redirect_url,
                 oauth: google_oauth,
             },
@@ -86,8 +86,7 @@ async fn main() {
     dotenvy::dotenv().ok();
     let database_url = std::env::var("DATABASE_URL").expect("Unable to read DATABASE_URL ENV");
 
-    let pool = PgPoolOptions::new()
-        .connect(&database_url)
+    let pool = sqlx::PgPool::connect(&database_url)
         .await
         .expect("Could not make pool.");
 
@@ -117,18 +116,20 @@ async fn main() {
             .unwrap_or_else(|_| "1x0000000000000000000000000000000AA".into());
 
         let google_redirect_url = std::env::var("GOOGLE_OAUTH_REDIRECT")
-            .unwrap_or_else(|_| "http://localhost:8000/api/auth/google".to_string());
+            .unwrap_or("http://localhost:8000/api/auth/google".to_string());
 
-        let google_oauth = oauth2::basic::BasicClient::new(
-            oauth2::ClientId::new(std::env::var("GOOGLE_OAUTH_CLIENT_ID").unwrap()),
-            Some(oauth2::ClientSecret::new(
-                std::env::var("GOOGLE_OAUTH_SECRET").unwrap(),
-            )),
-            oauth2::AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".into()).unwrap(),
-            Some(
-                oauth2::TokenUrl::new("https://www.googleapis.com/oauth2/v3/token".into()).unwrap(),
-            ),
+        let google_oauth = oauth2::basic::BasicClient::new(oauth2::ClientId::new(
+            std::env::var("GOOGLE_OAUTH_CLIENT_ID").unwrap(),
+        ))
+        .set_token_uri(
+            oauth2::TokenUrl::new("https://www.googleapis.com/oauth2/v3/token".into()).unwrap(),
         )
+        .set_auth_uri(
+            oauth2::AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".into()).unwrap(),
+        )
+        .set_client_secret(oauth2::ClientSecret::new(
+            std::env::var("GOOGLE_OAUTH_SECRET").unwrap(),
+        ))
         .set_redirect_uri(oauth2::RedirectUrl::new(google_redirect_url.clone()).unwrap());
 
         joes_book::AppState {
@@ -138,7 +139,7 @@ async fn main() {
                 site_key: turnstile_site_key,
                 client: cf_turnstile::TurnstileClient::new(turnstile_secret.into()),
             },
-            google: GoogleState {
+            google: joes_book::GoogleState {
                 redirect_url: google_redirect_url,
                 oauth: google_oauth,
             },
