@@ -1,0 +1,7 @@
+publish:
+	cargo outdated --exit-code 1
+	typos
+	cargo test
+	cargo publish
+	git tag -a -m "release" "v$(cargo read-manifest | jaq -r '.version')"
+	git push --follow-tags origin main
