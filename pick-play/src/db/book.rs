@@ -56,7 +56,7 @@ pub async fn get_book(
     .await
 }
 
-pub async fn get_book_users(book_id: i32, pool: &PgPool) -> Result<Vec<(i32, String)>, AppError> {
+pub async fn get_book_users(book_id: i32, pool: &PgPool) -> Result<Box<[(i32, String)]>, AppError> {
     Ok(sqlx::query!(
         "
             SELECT users.id, users.username

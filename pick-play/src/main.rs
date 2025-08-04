@@ -1,5 +1,3 @@
-use pick_play::{auth::BackendPgDB, router};
-
 use axum_login::AuthManagerLayerBuilder;
 use tower_sessions::{cookie::time::Duration, Expiry, SessionManagerLayer};
 use tower_sessions_sqlx_store::PostgresStore;
@@ -9,12 +7,12 @@ use tower_sessions_sqlx_store::PostgresStore;
 pub async fn shuttle(
     #[shuttle_runtime::Secrets] secrets: shuttle_runtime::SecretStore,
     #[shuttle_shared_db::Postgres(
-        local_uri = "postgres://postgres:postgres@localhost:5432/pick-play"
+        local_uri = "postgres://postgres:postgres@localhost:5432/joes-book"
     )]
     pool: sqlx::PgPool,
 ) -> shuttle_axum::ShuttleAxum {
     let auth_layer = {
-        let backend = BackendPgDB(pool.clone());
+        let backend = pick_play::auth::BackendPgDB(pool.clone());
         backend.init_admin().await.ok();
 
         let session_store = PostgresStore::new(pool.clone());
@@ -81,7 +79,7 @@ pub async fn shuttle(
         }
     };
 
-    let app = router()
+    let app = pick_play::router()
         .layer(auth_layer)
         .layer(tower_http::trace::TraceLayer::new_for_http())
         .with_state(&*Box::leak(Box::new(state)));
@@ -100,7 +98,7 @@ async fn main() {
         .expect("Could not make pool.");
 
     let auth_layer = {
-        let backend = BackendPgDB(pool.clone());
+        let backend = pick_play::auth::BackendPgDB(pool.clone());
         backend.init_admin().await.ok();
 
         let session_store = PostgresStore::new(pool.clone());
@@ -162,7 +160,7 @@ async fn main() {
         }
     };
 
-    let app = router()
+    let app = pick_play::router()
         .layer(auth_layer)
         .layer(tower_http::trace::TraceLayer::new_for_http())
         .with_state(&*Box::leak(Box::new(state)));

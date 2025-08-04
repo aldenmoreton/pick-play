@@ -4,7 +4,7 @@ use axum::{
     http::{HeaderMap, Response, StatusCode, Uri},
     middleware,
     response::{ErrorResponse, IntoResponse, Redirect},
-    routing::get,
+    routing::{get, post},
     Form, Router,
 };
 use axum_ctx::{RespErr, RespErrCtx, RespErrExt};
@@ -35,6 +35,7 @@ pub fn router() -> Router<AppStateRef> {
                 next.run(request).await.into_response()
             },
         ))
+        .route("/logout", post(crate::session::logout))
 }
 
 pub async fn login_page(State(state): State<AppStateRef>) -> impl IntoResponse {

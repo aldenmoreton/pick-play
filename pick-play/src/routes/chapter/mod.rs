@@ -1,13 +1,12 @@
+use axum::routing::MethodRouter;
 use axum::{
     handler::Handler as _,
     middleware,
-    response::Redirect,
     routing::{get, post},
     Extension, Router,
 };
-use reqwest::StatusCode;
 
-use crate::{auth, db, AppNotification, AppStateRef};
+use crate::{auth, db, AppStateRef};
 
 use super::book;
 
@@ -15,54 +14,24 @@ pub mod admin;
 pub mod create;
 pub mod page;
 
+async fn get_chapter_home(
+    auth_session: auth::AuthSession,
+    Extension(book_subscription): Extension<db::book::BookSubscription>,
+    Extension(chapter): Extension<db::chapter::Chapter>,
+) -> impl axum::response::IntoResponse {
+    if chapter.is_open {
+        page::open_book(auth_session, &book_subscription, &chapter).await
+    } else {
+        page::closed_book(auth_session, &book_subscription, &chapter).await
+    }
+}
+
 #[inline]
 pub fn router() -> Router<AppStateRef> {
-    let chapter_home_page = get(
-        async |auth_session: auth::AuthSession,
-               Extension(book_subscription): Extension<db::book::BookSubscription>,
-               Extension(chapter): Extension<db::chapter::Chapter>| {
-            if chapter.is_open {
-                page::open_book(auth_session, &book_subscription, &chapter).await
-            } else {
-                page::closed_book(auth_session, &book_subscription, &chapter).await
-            }
-        },
-    )
-    .post(page::submit.layer(middleware::from_fn(
-        async |Extension(chapter): Extension<db::chapter::Chapter>,
-               request,
-               next: middleware::Next| {
-            if chapter.is_open {
-                Ok(next.run(request).await)
-            } else {
-                Err(AppNotification(
-                    StatusCode::LOCKED,
-                    "This chapter is closed".into(),
-                ))
-            }
-        },
-    )))
-    .layer(middleware::from_fn(
-        async |Extension(chapter): Extension<db::chapter::Chapter>,
-               Extension(book_subscription): Extension<db::book::BookSubscription>,
-               request,
-               next: middleware::Next| {
-            match book_subscription.role {
-                db::book::BookRole::Owner | db::book::BookRole::Admin => {
-                    Ok(next.run(request).await)
-                }
-                db::book::BookRole::Participant if chapter.is_visible => {
-                    Ok(next.run(request).await)
-                }
-                db::book::BookRole::Guest { chapter_ids }
-                    if chapter.is_visible && chapter_ids.contains(&chapter.chapter_id) =>
-                {
-                    Ok(next.run(request).await)
-                }
-                _ => Err((StatusCode::UNAUTHORIZED, Redirect::to("/"))),
-            }
-        },
-    ));
+    let chapter_home_page = MethodRouter::new()
+        .get(get_chapter_home)
+        .post(page::submit.layer(middleware::from_fn(mw::confirm_chapter_open)))
+        .layer(middleware::from_fn(mw::confirm_user_access));
 
     Router::new()
         .nest(
@@ -98,6 +67,7 @@ pub mod mw {
         http::Response,
         middleware::Next,
         response::{ErrorResponse, Redirect},
+        Extension,
     };
 
     use crate::{
@@ -129,5 +99,43 @@ pub mod mw {
         request.extensions_mut().insert(chapter);
 
         Ok(next.run(request).await)
+    }
+
+    pub(super) async fn confirm_user_access(
+        Extension(chapter): Extension<crate::db::chapter::Chapter>,
+        Extension(book_subscription): Extension<crate::db::book::BookSubscription>,
+        request: Request,
+        next: axum::middleware::Next,
+    ) -> Result<Response<Body>, ErrorResponse> {
+        match book_subscription.role {
+            crate::db::book::BookRole::Owner | crate::db::book::BookRole::Admin => {
+                Ok(next.run(request).await)
+            }
+            crate::db::book::BookRole::Participant if chapter.is_visible => {
+                Ok(next.run(request).await)
+            }
+            crate::db::book::BookRole::Guest {
+                chapter_ids: guest_chapter_ids,
+            } if chapter.is_visible && guest_chapter_ids.contains(&chapter.chapter_id) => {
+                Ok(next.run(request).await)
+            }
+            _ => Err((axum::http::StatusCode::UNAUTHORIZED, Redirect::to("/")).into()),
+        }
+    }
+
+    pub(super) async fn confirm_chapter_open(
+        Extension(chapter): Extension<crate::db::chapter::Chapter>,
+        request: Request,
+        next: axum::middleware::Next,
+    ) -> Result<Response<Body>, ErrorResponse> {
+        if chapter.is_open {
+            Ok(next.run(request).await)
+        } else {
+            Err(crate::AppNotification(
+                axum::http::StatusCode::LOCKED,
+                "This chapter is closed".into(),
+            )
+            .into())
+        }
     }
 }

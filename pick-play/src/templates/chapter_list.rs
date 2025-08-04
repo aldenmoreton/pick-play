@@ -2,7 +2,11 @@ use std::iter::Peekable;
 
 use crate::db::chapter::Chapter;
 
-pub fn markup<'a, I>(book_id: i32, mut chapters: Peekable<I>) -> maud::Markup
+pub fn chapter_list<'a, I>(
+    book_id: i32,
+    mut chapters: Peekable<I>,
+    empty_message: Option<&str>,
+) -> maud::Markup
 where
     I: Iterator<Item = &'a Chapter>,
 {
@@ -11,7 +15,7 @@ where
             ul class="items-center self-center justify-center" {
                 @if chapters.peek().is_none() {
                     li class="p-3 h-30 w-60" {
-                        p { "No Chapters Yet!" }
+                        p { (empty_message.unwrap_or("No chapters")) }
                     }
                 }
                 @for chapter in chapters {

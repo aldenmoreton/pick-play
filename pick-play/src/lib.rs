@@ -74,8 +74,8 @@ pub fn router() -> Router<AppStateRef> {
     Router::new()
         .nest("/admin", site_admin_routes)
         .nest("/book", book::router())
-        .merge(home::router())
         .route("/team-search", get(team::search::search))
+        .route("/", get(home::handler))
         // ------------------^ Logged in Routes ^------------------
         .route_layer(axum_login::login_required!(
             BackendPgDB,

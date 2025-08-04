@@ -52,7 +52,8 @@ pub async fn handler(
                                 "Admin"
                             }
                         }
-                        (chapter_list::markup(book_subscription.id, chapters.iter().filter(|c| !c.is_visible).peekable()))
+
+                        (chapter_list::chapter_list(book_subscription.id, chapters.iter().filter(|c| !c.is_visible).peekable(),Some("No Unpublished Chapters")))
                     }
                 }
             }
@@ -69,9 +70,9 @@ pub async fn handler(
             }
 
             @if let Some(guest_chapters) = guest_chapters {
-                (chapter_list::markup(book_subscription.id, chapters.iter().filter(|c| c.is_visible && guest_chapters.contains(&c.chapter_id)).peekable()))
+                (chapter_list::chapter_list(book_subscription.id, chapters.iter().filter(|c| c.is_visible && guest_chapters.contains(&c.chapter_id)).peekable(), None))
             } @else {
-                (chapter_list::markup(book_subscription.id, chapters.iter().filter(|c| c.is_visible).peekable()))
+                (chapter_list::chapter_list(book_subscription.id, chapters.iter().filter(|c| c.is_visible).peekable(), None))
             }
         }),
         None,

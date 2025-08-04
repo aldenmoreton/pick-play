@@ -4,7 +4,6 @@ use crate::AppError;
 
 use super::{spread::Spread, user_input::UserInput};
 
-use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use sqlx::types::Json;
 use sqlx::PgPool;
@@ -127,7 +126,7 @@ pub async fn get_picks(
 
                 (event, pick)
             })
-            .collect_vec()
+            .collect()
     })
 }
 
