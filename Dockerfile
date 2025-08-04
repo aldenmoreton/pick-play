@@ -1,31 +1,44 @@
-ARG RUST_VERSION=1.80.1
 ARG APP_NAME=pick-play
 
-# Build executable
-FROM rust:${RUST_VERSION}-alpine AS build
-ARG APP_NAME
+# Chef stage - install cargo-chef with nightly support
+FROM rust:1.83-alpine AS chef
+RUN apk add --no-cache clang lld musl-dev git pkgconfig openssl-dev openssl-libs-static
+RUN rustup toolchain install nightly
+RUN cargo install cargo-chef --locked
 WORKDIR /app
 
-RUN apk add --no-cache clang lld musl-dev git pkgconfig openssl-dev openssl-libs-static
+# Planner stage - generate recipe.json
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
 
-RUN --mount=type=bind,source=.sqlx,target=.sqlx \
-    --mount=type=bind,source=src,target=src \
-    --mount=type=bind,source=Cargo.toml,target=Cargo.toml \
-    --mount=type=bind,source=Cargo.lock,target=Cargo.lock \
-    --mount=type=cache,target=/app/target/ \
-    --mount=type=cache,target=/usr/local/cargo/git/db \
-    --mount=type=cache,target=/usr/local/cargo/registry/ \
-cargo build --locked --release --no-default-features && \
-cp ./target/release/$APP_NAME /bin/server
+# Builder stage - cache dependencies and build application
+FROM chef AS builder
+ARG APP_NAME
+
+# Copy recipe and build dependencies (this layer will be cached)
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo +nightly chef cook --release --recipe-path recipe.json --no-default-features
+
+# Copy source code and build application
+COPY . .
+RUN cargo +nightly build --locked --release --no-default-features --bin $APP_NAME && \
+    cp ./target/release/$APP_NAME /bin/server
 
 FROM node:18.13.0 AS styles
+WORKDIR /app
 
-RUN --mount=type=bind,source=package.json,target=package.json \
-    --mount=type=bind,source=tailwind.config.js,target=tailwind.config.js \
-    --mount=type=bind,source=style,target=style \
-    --mount=type=bind,source=src,target=src \
-    --mount=type=cache,target=node_modules \
-    npx tailwindcss -i style/input.css -o /bookie.css
+# Copy package files and install dependencies
+COPY package.json .
+RUN npm install
+
+# Copy source files needed for Tailwind
+COPY tailwind.config.js .
+COPY style/ ./style/
+COPY pick-play/src/ ./src/
+
+# Generate CSS
+RUN npx tailwindcss -i style/input.css -o /bookie.css
 
 FROM alpine:3.18 AS final
 
@@ -43,8 +56,8 @@ USER appuser
 # Copy the public folder
 COPY ./public /public
 
-# Copy the executable from the "build" stage.
-COPY --from=build /bin/server /bin/server/
+# Copy the executable from the "builder" stage.
+COPY --from=builder /bin/server /bin/server/
 
 # Copy styles
 COPY --from=styles /bookie.css /public/styles/bookie.css
