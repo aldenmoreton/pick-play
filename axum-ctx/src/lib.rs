@@ -463,7 +463,12 @@ impl IntoResponse for RespErr {
     fn into_response(self) -> Response {
         let ind = self.status_code.as_u16() as usize;
 
-        match unsafe { std::ptr::addr_of!(STATUS_CODE_TRACE_LEVEL).as_ref().unwrap().get(ind) } {
+        match unsafe {
+            std::ptr::addr_of!(STATUS_CODE_TRACE_LEVEL)
+                .as_ref()
+                .expect("STATUS_CODE_TRACE_LEVEL should be initialized")
+                .get(ind)
+        } {
             Some(TracingLevel::Trace) => event!(Level::TRACE, "{self}"),
             Some(TracingLevel::Debug) => event!(Level::DEBUG, "{self}"),
             Some(TracingLevel::Info) => event!(Level::INFO, "{self}"),

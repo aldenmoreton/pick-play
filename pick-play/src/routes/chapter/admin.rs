@@ -110,12 +110,20 @@ pub async fn post(
                         .zip(selections.into_iter())
                         .for_each(|(spread, selection)| spread.answer = Some(selection));
 
-                    Ok((event.id, serde_json::to_value(event.contents).unwrap()))
+                    Ok((
+                        event.id,
+                        serde_json::to_value(event.contents)
+                            .expect("Failed to serialize spread group event contents to JSON"),
+                    ))
                 }
                 (EventContent::UserInput(input), AnswerEventContent::UserInput { choices }) => {
                     input.acceptable_answers =
                         Some(choices.unwrap_or_default().into_iter().collect());
-                    Ok((event.id, serde_json::to_value(event.contents).unwrap()))
+                    Ok((
+                        event.id,
+                        serde_json::to_value(event.contents)
+                            .expect("Failed to serialize user input event contents to JSON"),
+                    ))
                 }
                 _ => Err(RespErr::new(StatusCode::BAD_REQUEST)
                     .user_msg("Submitted event does not match its actual type")),

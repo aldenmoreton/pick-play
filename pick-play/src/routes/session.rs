@@ -179,7 +179,13 @@ pub async fn legacy_login_form(
 
     let desired_redirect = headers
         .get("referer")
-        .and_then(|referer| referer.to_str().unwrap().parse::<Uri>().ok())
+        .and_then(|referer| {
+            referer
+                .to_str()
+                .expect("Failed to convert referer header to string")
+                .parse::<Uri>()
+                .ok()
+        })
         .and_then(|uri| RedirectQuery::try_from_uri(&uri).ok())
         .map(|query: RedirectQuery| query.0.next)
         .unwrap_or("/".to_string());

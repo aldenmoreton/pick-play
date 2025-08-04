@@ -53,7 +53,8 @@ impl BackendPgDB {
     }
 
     pub async fn signup(&self, username: &str, password: &str) -> Result<BackendUser, sqlx::Error> {
-        let password_hashed = bcrypt::hash(password, bcrypt::DEFAULT_COST).unwrap();
+        let password_hashed =
+            bcrypt::hash(password, bcrypt::DEFAULT_COST).expect("Failed to hash password");
 
         sqlx::query!(
             r#" INSERT INTO users (username, password)

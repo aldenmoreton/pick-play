@@ -45,18 +45,27 @@ pub async fn shuttle(
             .unwrap_or("http://localhost:8000/api/auth/google".to_string());
 
         let google_oauth = oauth2::basic::BasicClient::new(oauth2::ClientId::new(
-            secrets.get("GOOGLE_OAUTH_CLIENT_ID").unwrap(),
+            secrets
+                .get("GOOGLE_OAUTH_CLIENT_ID")
+                .expect("GOOGLE_OAUTH_CLIENT_ID must be set in secrets"),
         ))
         .set_token_uri(
-            oauth2::TokenUrl::new("https://www.googleapis.com/oauth2/v3/token".into()).unwrap(),
+            oauth2::TokenUrl::new("https://www.googleapis.com/oauth2/v3/token".into())
+                .expect("Failed to create OAuth token URL"),
         )
         .set_auth_uri(
-            oauth2::AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".into()).unwrap(),
+            oauth2::AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".into())
+                .expect("Failed to create OAuth auth URL"),
         )
         .set_client_secret(oauth2::ClientSecret::new(
-            secrets.get("GOOGLE_OAUTH_SECRET").unwrap(),
+            secrets
+                .get("GOOGLE_OAUTH_SECRET")
+                .expect("GOOGLE_OAUTH_SECRET must be set in secrets"),
         ))
-        .set_redirect_uri(oauth2::RedirectUrl::new(google_redirect_url.clone()).unwrap());
+        .set_redirect_uri(
+            oauth2::RedirectUrl::new(google_redirect_url.clone())
+                .expect("Failed to create OAuth redirect URL"),
+        );
 
         pick_play::AppState {
             pool,
@@ -119,18 +128,25 @@ async fn main() {
             .unwrap_or("http://localhost:8000/api/auth/google".to_string());
 
         let google_oauth = oauth2::basic::BasicClient::new(oauth2::ClientId::new(
-            std::env::var("GOOGLE_OAUTH_CLIENT_ID").unwrap(),
+            std::env::var("GOOGLE_OAUTH_CLIENT_ID")
+                .expect("GOOGLE_OAUTH_CLIENT_ID environment variable must be set"),
         ))
         .set_token_uri(
-            oauth2::TokenUrl::new("https://www.googleapis.com/oauth2/v3/token".into()).unwrap(),
+            oauth2::TokenUrl::new("https://www.googleapis.com/oauth2/v3/token".into())
+                .expect("Failed to create OAuth token URL"),
         )
         .set_auth_uri(
-            oauth2::AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".into()).unwrap(),
+            oauth2::AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".into())
+                .expect("Failed to create OAuth auth URL"),
         )
         .set_client_secret(oauth2::ClientSecret::new(
-            std::env::var("GOOGLE_OAUTH_SECRET").unwrap(),
+            std::env::var("GOOGLE_OAUTH_SECRET")
+                .expect("GOOGLE_OAUTH_SECRET environment variable must be set"),
         ))
-        .set_redirect_uri(oauth2::RedirectUrl::new(google_redirect_url.clone()).unwrap());
+        .set_redirect_uri(
+            oauth2::RedirectUrl::new(google_redirect_url.clone())
+                .expect("Failed to create OAuth redirect URL"),
+        );
 
         pick_play::AppState {
             pool,
@@ -153,6 +169,10 @@ async fn main() {
 
     println!();
     println!("Starting server at http://localhost:8000");
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:8000").await.unwrap();
-    axum::serve(listener, app).await.unwrap();
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:8000")
+        .await
+        .expect("Failed to bind to address 0.0.0.0:8000");
+    axum::serve(listener, app)
+        .await
+        .expect("Failed to start server");
 }
