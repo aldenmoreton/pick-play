@@ -25,7 +25,7 @@ pub fn base(
             head {
                 meta charset="utf-8";
                 meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.00, minimum-scale=1.00";
-                title {(page_title.unwrap_or("Joe's Book"))}
+                title {(page_title.unwrap_or("Pick Play"))}
                 link rel="icon" type="image/ico" href="/public/favicon.ico";
                 link rel="manifest" href="/public/manifest.json";
                 link rel="stylesheet" id="tailwind" href="/public/styles/bookie.css";
@@ -34,7 +34,7 @@ pub fn base(
                 @if let Some(graph) = open_graph {
                     (graph)
                 } @else {
-                    meta property="og:title" content="Joe's Book";
+                    meta property="og:title" content="Pick Play";
                     meta property="og:image" content="/public/icon-512x512.png";
                     meta property="og:image:type" content="image/png";
                     meta property="og:image:width" content="512";
@@ -44,7 +44,7 @@ pub fn base(
                         property="og:description"
                         content="Sports Picks";
                 }
-                meta property="og:site_name" content="Joe's Book";
+                meta property="og:site_name" content="Pick Play";
 
                 (head.unwrap_or_default())
             }

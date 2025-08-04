@@ -39,7 +39,7 @@ pub fn router() -> Router<AppStateRef> {
 
 pub async fn login_page(State(state): State<AppStateRef>) -> impl IntoResponse {
     base(
-        Some("Joe's Book"),
+        Some("Pick Play"),
         None,
         Some(maud::html!{
             link rel="stylesheet" href="/public/styles/google-sign-in.css";
