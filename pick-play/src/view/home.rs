@@ -2,7 +2,7 @@ use crate::{model::book::BookSubscription, view::book_list};
 
 use super::authenticated;
 
-pub fn markup(username: &str, is_admin: bool, books: Vec<BookSubscription>) -> maud::Markup {
+pub fn m(username: &str, is_admin: bool, books: Vec<BookSubscription>) -> maud::Markup {
     authenticated(
         username,
         Some("Home"),

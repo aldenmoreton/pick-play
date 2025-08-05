@@ -6,7 +6,7 @@ use crate::{
         book::{BookRole, BookSubscription},
         chapter::get_chapters,
     },
-    view::chapter_list,
+    view::chapter::list as chapter_list,
     AppError, AppStateRef,
 };
 
@@ -53,7 +53,7 @@ pub async fn handler(
                             }
                         }
 
-                        (chapter_list::chapter_list(book_subscription.id, chapters.iter().filter(|c| !c.is_visible).peekable(),Some("No Unpublished Chapters")))
+                        (chapter_list::m(book_subscription.id, chapters.iter().filter(|c| !c.is_visible).peekable(),Some("No Unpublished Chapters")))
                     }
                 }
             }
@@ -70,9 +70,9 @@ pub async fn handler(
             }
 
             @if let Some(guest_chapters) = guest_chapters {
-                (chapter_list::chapter_list(book_subscription.id, chapters.iter().filter(|c| c.is_visible && guest_chapters.contains(&c.chapter_id)).peekable(), None))
+                (chapter_list::m(book_subscription.id, chapters.iter().filter(|c| c.is_visible && guest_chapters.contains(&c.chapter_id)).peekable(), None))
             } @else {
-                (chapter_list::chapter_list(book_subscription.id, chapters.iter().filter(|c| c.is_visible).peekable(), None))
+                (chapter_list::m(book_subscription.id, chapters.iter().filter(|c| c.is_visible).peekable(), None))
             }
         }),
         None,

@@ -34,7 +34,7 @@ pub async fn get(
         .await
         .map_err(AppError::from)?;
 
-    Ok(crate::view::chapter_admin::markup(
+    Ok(crate::view::chapter::admin::m(
         &user.username,
         &book_subscription.name,
         chapter,
@@ -246,7 +246,7 @@ pub async fn open(
     .execute(pool)
     .await?;
 
-    Ok(crate::view::chapter_admin::chapter_open_button(toggle))
+    Ok(crate::view::chapter::admin::chapter_open_button(toggle))
 }
 
 pub async fn visible(
@@ -268,7 +268,7 @@ pub async fn visible(
     .execute(pool)
     .await?;
 
-    Ok(crate::view::chapter_admin::chapter_visible_button(toggle))
+    Ok(crate::view::chapter::admin::chapter_visible_button(toggle))
 }
 
 #[derive(Debug, serde::Deserialize)]

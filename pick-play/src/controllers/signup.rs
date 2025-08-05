@@ -61,7 +61,7 @@ pub async fn signup_form(
         ));
     }
 
-    let user_exists = crate::model::user::user_exists(&form.username, pool)
+    let user_exists = crate::model::user::exists(&form.username, pool)
         .await
         .map_err(AppError::from)?;
 

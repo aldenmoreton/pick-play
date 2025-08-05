@@ -14,9 +14,5 @@ pub async fn handler(session: AuthSession) -> Result<maud::Markup, ErrorResponse
 
     let is_admin = has_perm("admin", user.id, &pool).await.unwrap_or(false);
 
-    Ok(crate::view::home_page::markup(
-        &user.username,
-        is_admin,
-        books,
-    ))
+    Ok(crate::view::home::m(&user.username, is_admin, books))
 }

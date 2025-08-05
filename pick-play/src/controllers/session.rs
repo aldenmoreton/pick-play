@@ -1,21 +1,22 @@
-use axum::{
-    body::Body,
-    extract::{Query, State},
-    http::{HeaderMap, Response, StatusCode, Uri},
-    middleware,
-    response::{ErrorResponse, IntoResponse, Redirect},
-    routing::{get, post},
-    Form, Router,
+use {
+    super::finish_signup,
+    crate::{
+        auth::{self, AuthSession},
+        AppStateRef,
+    },
 };
-use axum_ctx::{RespErr, RespErrCtx, RespErrExt};
-use axum_extra::extract::CookieJar;
-
-use crate::{
-    auth::{self, AuthSession, LoginCreds, UserCredentials},
-    AppError, AppNotification, AppStateRef,
+use {
+    axum::{
+        body::Body,
+        extract::State,
+        http::{Response, StatusCode},
+        middleware,
+        response::IntoResponse,
+        routing::{get, post},
+        Router,
+    },
+    axum_ctx::{RespErr, RespErrCtx, RespErrExt},
 };
-
-use super::finish_signup;
 
 #[inline]
 pub fn router() -> Router<AppStateRef> {
@@ -23,7 +24,7 @@ pub fn router() -> Router<AppStateRef> {
         .route("/api/auth/google", get(google::google_oauth))
         .route(
             "/finish-signup",
-            get(finish_signup::get).post(finish_signup::post),
+            get(finish_signup::finish_page).post(finish_signup::post),
         )
         .route("/login", get(crate::session::login_page))
         .route_layer(middleware::from_fn(
@@ -48,119 +49,6 @@ pub async fn login_explaination() -> maud::Markup {
             "Don't worry, you will be able to link your old account during the new login process."
         }
     }
-}
-
-pub async fn legacy_login_page(cookies: CookieJar, state: State<AppStateRef>) -> Response<Body> {
-    if cookies.get("signup_token").is_none() {
-        return Redirect::to("/login").into_response();
-    }
-
-    crate::view::legacy_login::m(&state.turnstile.site_key).into_response()
-}
-
-#[derive(Debug, serde::Deserialize)]
-struct RedirectPath {
-    next: String,
-}
-
-type RedirectQuery = Query<RedirectPath>;
-
-pub async fn legacy_login_form(
-    mut auth_session: AuthSession,
-    headers: HeaderMap,
-    cookies: CookieJar,
-    State(state): State<AppStateRef>,
-    Form(creds): Form<LoginCreds>,
-) -> Result<impl IntoResponse, ErrorResponse> {
-    let cf_validate: Result<cf_turnstile::SiteVerifyResponse, cf_turnstile::error::TurnstileError> =
-        state
-            .turnstile
-            .client
-            .siteverify(cf_turnstile::SiteVerifyRequest {
-                response: creds.turnstile_response,
-                ..Default::default()
-            })
-            .await;
-
-    if !cf_validate.map(|v| v.success).unwrap_or(false) {
-        return Err(AppNotification(
-            StatusCode::UNAUTHORIZED,
-            "You did not pass our check for robots".into(),
-        )
-        .into());
-    }
-
-    let signup_token = cookies
-        .get("signup_token")
-        .ok_or([("HX-Redirect", "/login")])?;
-
-    let mut transaction = state.pool.begin().await.map_err(AppError::from)?;
-
-    let oauth_profile = sqlx::query!(
-        "
-        DELETE FROM signup_tokens
-        WHERE token = $1
-        RETURNING sub, provider
-        ",
-        signup_token.value()
-    )
-    .fetch_optional(&mut *transaction)
-    .await
-    .map_err(|e| AppNotification::from(AppError::from(e)))?
-    .ok_or([("HX-Redirect", "/login")])?;
-
-    let user = auth_session
-        .authenticate(UserCredentials {
-            username: creds.username,
-            password: creds.password,
-        })
-        .await
-        .map_err(|e| RespErr::new(StatusCode::INTERNAL_SERVER_ERROR).log_msg(e.to_string()))?
-        .ok_or(AppNotification(
-            StatusCode::UNAUTHORIZED,
-            "Invalid Username or Password".into(),
-        ))?;
-
-    sqlx::query!(
-        "
-        UPDATE oauth
-        SET user_id = $1
-        WHERE sub = $2 AND provider = $3
-        ",
-        user.id,
-        oauth_profile.sub,
-        oauth_profile.provider
-    )
-    .execute(&mut *transaction)
-    .await
-    .map_err(|e| AppNotification::from(AppError::from(e)))?;
-
-    auth_session.login(&user).await.map_err(|_| {
-        AppNotification(
-            StatusCode::REQUEST_TIMEOUT,
-            "Our Fault! Please try again.".into(),
-        )
-    })?;
-
-    let desired_redirect = headers
-        .get("referer")
-        .and_then(|referer| {
-            referer
-                .to_str()
-                .expect("Failed to convert referer header to string")
-                .parse::<Uri>()
-                .ok()
-        })
-        .and_then(|uri| RedirectQuery::try_from_uri(&uri).ok())
-        .map(|query: RedirectQuery| query.0.next)
-        .unwrap_or("/".to_string());
-
-    transaction.commit().await.map_err(AppError::from)?;
-
-    Ok((
-        cookies.remove("signup_token"),
-        [("HX-Location", desired_redirect)].into_response(),
-    ))
 }
 
 pub async fn logout(mut auth_session: self::AuthSession) -> Result<Response<Body>, RespErr> {

@@ -32,7 +32,7 @@ pub async fn open_book(
     let user_picks = user_picks.await.map_err(AppError::from)?;
     let relevent_teams = relevent_teams.await.map_err(AppError::from)?;
 
-    Ok(crate::view::chapter_open::markup(
+    Ok(crate::view::chapter::open::m(
         &user.username,
         &book_subscription.name,
         chapter,

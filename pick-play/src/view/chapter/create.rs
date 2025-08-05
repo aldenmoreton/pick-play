@@ -1,6 +1,6 @@
 use crate::view::authenticated;
 
-pub fn markup(username: &str, book_name: &str) -> maud::Markup {
+pub fn m(username: &str, book_name: &str) -> maud::Markup {
     authenticated(
         username,
         Some("Create Chapter"),

@@ -10,9 +10,9 @@ use crate::model::{
     user_input::UserInput,
 };
 
-use super::authenticated;
+use super::super::authenticated;
 
-pub fn markup(
+pub fn m(
     username: &str,
     book_name: &str,
     chapter: &Chapter,

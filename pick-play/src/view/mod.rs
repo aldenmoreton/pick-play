@@ -2,11 +2,9 @@ use maud::{html, Markup, DOCTYPE};
 
 pub mod add_event;
 pub mod book_list;
-pub mod chapter_admin;
-pub mod chapter_create;
-pub mod chapter_list;
-pub mod chapter_open;
-pub mod home_page;
+pub mod chapter;
+pub mod finish_signup;
+pub mod home;
 pub mod legacy_login;
 pub mod login;
 pub mod signup;
@@ -50,7 +48,7 @@ pub fn base(
 
                 (head.unwrap_or_default())
             }
-            body class="justify-center text-center bg-green-50" {
+            body class="justify-center text-center" {
                 script {"0"}
                 @if let Some(header_markup) = header {
                     header { (header_markup) }

@@ -22,7 +22,7 @@ pub async fn get(
     Extension(book_subscription): Extension<BookSubscription>,
 ) -> Result<maud::Markup, RespErr> {
     let username = auth_session.user.ok_or(AppError::BackendUser)?.username;
-    Ok(crate::view::chapter_create::markup(
+    Ok(crate::view::chapter::create::m(
         &username,
         &book_subscription.name,
     ))

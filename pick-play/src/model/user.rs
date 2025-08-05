@@ -1,4 +1,4 @@
-pub async fn user_exists(username: &str, pool: &sqlx::PgPool) -> Result<bool, sqlx::Error> {
+pub async fn exists(username: &str, pool: &sqlx::PgPool) -> Result<bool, sqlx::Error> {
     sqlx::query!(
         "
 		SELECT id

@@ -2,7 +2,7 @@ use std::iter::Peekable;
 
 use crate::model::chapter::Chapter;
 
-pub fn chapter_list<'a, I>(
+pub fn m<'a, I>(
     book_id: i32,
     mut chapters: Peekable<I>,
     empty_message: Option<&str>,
