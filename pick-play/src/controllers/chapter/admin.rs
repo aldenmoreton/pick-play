@@ -9,7 +9,7 @@ use axum_ctx::{RespErr, RespErrCtx, RespErrExt, StatusCode};
 
 use crate::{
     auth::{AuthSession, BackendPgDB},
-    db::{
+    model::{
         book::BookSubscription,
         chapter::Chapter,
         event::{get_events, EventContent},
@@ -34,7 +34,7 @@ pub async fn get(
         .await
         .map_err(AppError::from)?;
 
-    Ok(crate::templates::chapter_admin::markup(
+    Ok(crate::view::chapter_admin::markup(
         &user.username,
         &book_subscription.name,
         chapter,
@@ -246,7 +246,7 @@ pub async fn open(
     .execute(pool)
     .await?;
 
-    Ok(crate::templates::chapter_admin::chapter_open_button(toggle))
+    Ok(crate::view::chapter_admin::chapter_open_button(toggle))
 }
 
 pub async fn visible(
@@ -268,9 +268,7 @@ pub async fn visible(
     .execute(pool)
     .await?;
 
-    Ok(crate::templates::chapter_admin::chapter_visible_button(
-        toggle,
-    ))
+    Ok(crate::view::chapter_admin::chapter_visible_button(toggle))
 }
 
 #[derive(Debug, serde::Deserialize)]

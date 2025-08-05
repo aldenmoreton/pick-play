@@ -1,9 +1,9 @@
-pub fn markup(site_key: &str) -> maud::Markup {
-    crate::templates::base(
+pub fn m(site_key: &str) -> maud::Markup {
+    crate::view::base(
         Some("Login"),
         None,
         Some(maud::html!(
-            (crate::templates::alertify())
+            (crate::view::alertify())
             script src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onloadTurnstileCallback" defer {}
             script {
                 "window.onloadTurnstileCallback = function () {

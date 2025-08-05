@@ -2,7 +2,7 @@ use axum::response::ErrorResponse;
 
 use crate::{
     auth::{authz::has_perm, AuthSession},
-    db::book::get_books,
+    model::book::get_books,
     AppError,
 };
 
@@ -14,7 +14,7 @@ pub async fn handler(session: AuthSession) -> Result<maud::Markup, ErrorResponse
 
     let is_admin = has_perm("admin", user.id, &pool).await.unwrap_or(false);
 
-    Ok(crate::templates::home_page::markup(
+    Ok(crate::view::home_page::markup(
         &user.username,
         is_admin,
         books,

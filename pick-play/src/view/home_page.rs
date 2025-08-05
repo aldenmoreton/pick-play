@@ -1,4 +1,4 @@
-use crate::{db::book::BookSubscription, templates::book_list};
+use crate::{model::book::BookSubscription, view::book_list};
 
 use super::authenticated;
 

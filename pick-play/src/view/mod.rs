@@ -7,7 +7,9 @@ pub mod chapter_create;
 pub mod chapter_list;
 pub mod chapter_open;
 pub mod home_page;
-pub mod legacy_login_page;
+pub mod legacy_login;
+pub mod login;
+pub mod signup;
 pub mod team_search;
 pub mod team_select;
 

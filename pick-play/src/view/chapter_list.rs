@@ -1,6 +1,6 @@
 use std::iter::Peekable;
 
-use crate::db::chapter::Chapter;
+use crate::model::chapter::Chapter;
 
 pub fn chapter_list<'a, I>(
     book_id: i32,

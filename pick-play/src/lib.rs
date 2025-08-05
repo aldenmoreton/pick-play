@@ -1,7 +1,7 @@
 // TODO: Refactor some routes to end with / so that they can more
 // Simply route to the pages under them
 use {
-    crate::routes::*,
+    crate::controllers::*,
     auth::BackendPgDB,
     axum::{
         response::{Html, IntoResponse},
@@ -12,9 +12,8 @@ use {
     tower_http::services::ServeDir,
 };
 
-pub mod auth;
-
-pub mod routes {
+pub mod controllers {
+    pub mod auth;
     pub mod book;
     pub mod chapter;
     pub mod finish_signup;
@@ -24,16 +23,17 @@ pub mod routes {
     pub mod team;
 }
 
-pub mod db {
+pub mod model {
     pub mod book;
     pub mod chapter;
     pub mod event;
     pub mod spread;
     pub mod team;
+    pub mod user;
     pub mod user_input;
 }
 
-pub mod templates;
+pub mod view;
 
 type AppStateRef = &'static AppState;
 pub struct AppState {

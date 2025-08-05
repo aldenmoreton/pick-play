@@ -51,7 +51,7 @@ pub mod mw {
 
     use crate::{
         auth::{AuthSession, BackendPgDB},
-        db::book::{get_book, BookRole, BookSubscription},
+        model::book::{get_book, BookRole, BookSubscription},
         AppError,
     };
 

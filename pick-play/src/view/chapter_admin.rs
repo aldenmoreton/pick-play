@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::db::{
+use crate::model::{
     chapter::Chapter,
     event::{Event, EventContent},
     spread::Spread,
@@ -22,7 +22,7 @@ pub fn markup(
         None,
         Some(maud::html! {
             script src="/public/js/my-enc.js" {}
-            (crate::templates::alertify())
+            (crate::view::alertify())
         }),
         Some(maud::html! {
             p {

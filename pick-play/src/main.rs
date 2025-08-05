@@ -98,7 +98,7 @@ async fn main() {
         .expect("Could not make pool.");
 
     let auth_layer = {
-        let backend = pick_play::auth::BackendPgDB(pool.clone());
+        let backend = pick_play::controllers::auth::BackendPgDB(pool.clone());
         backend.init_admin().await.ok();
 
         let session_store = PostgresStore::new(pool.clone());

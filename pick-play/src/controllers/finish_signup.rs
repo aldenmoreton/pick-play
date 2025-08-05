@@ -6,7 +6,7 @@ use axum::{
 use axum_ctx::RespErr;
 use reqwest::StatusCode;
 
-use crate::{auth::AuthSession, templates::base, AppError, AppNotification};
+use crate::{auth::AuthSession, view::base, AppError, AppNotification};
 
 use super::session::OauthProfile;
 
@@ -54,7 +54,7 @@ pub async fn get(
                         });
                     };"
                 }
-                (crate::templates::alertify())
+                (crate::view::alertify())
             }),
             None,
             Some(maud::html!(

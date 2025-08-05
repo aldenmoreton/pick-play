@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use itertools::izip;
 use maud::{html, Markup};
 
-use crate::db::{
+use crate::model::{
     chapter::Chapter,
     event::{EventContent, Pick, UserPick},
     spread::Spread,
@@ -26,7 +26,7 @@ pub fn markup(
         None,
         Some(html! {
             script src="/public/js/my-enc.js" {}
-            (crate::templates::alertify())
+            (crate::view::alertify())
         }),
         Some(maud::html! {
             p {

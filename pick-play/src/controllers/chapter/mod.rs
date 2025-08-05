@@ -6,7 +6,7 @@ use axum::{
     Extension, Router,
 };
 
-use crate::{auth, db, AppStateRef};
+use crate::{auth, model, AppStateRef};
 
 use super::book;
 
@@ -16,8 +16,8 @@ pub mod page;
 
 async fn get_chapter_home(
     auth_session: auth::AuthSession,
-    Extension(book_subscription): Extension<db::book::BookSubscription>,
-    Extension(chapter): Extension<db::chapter::Chapter>,
+    Extension(book_subscription): Extension<model::book::BookSubscription>,
+    Extension(chapter): Extension<model::chapter::Chapter>,
 ) -> impl axum::response::IntoResponse {
     if chapter.is_open {
         page::open_book(auth_session, &book_subscription, &chapter).await
@@ -72,7 +72,7 @@ pub mod mw {
 
     use crate::{
         auth::{AuthSession, BackendPgDB},
-        db::chapter::get_chapter,
+        model::chapter::get_chapter,
     };
 
     #[derive(serde::Deserialize)]
@@ -102,19 +102,19 @@ pub mod mw {
     }
 
     pub(super) async fn confirm_user_access(
-        Extension(chapter): Extension<crate::db::chapter::Chapter>,
-        Extension(book_subscription): Extension<crate::db::book::BookSubscription>,
+        Extension(chapter): Extension<crate::model::chapter::Chapter>,
+        Extension(book_subscription): Extension<crate::model::book::BookSubscription>,
         request: Request,
         next: axum::middleware::Next,
     ) -> Result<Response<Body>, ErrorResponse> {
         match book_subscription.role {
-            crate::db::book::BookRole::Owner | crate::db::book::BookRole::Admin => {
+            crate::model::book::BookRole::Owner | crate::model::book::BookRole::Admin => {
                 Ok(next.run(request).await)
             }
-            crate::db::book::BookRole::Participant if chapter.is_visible => {
+            crate::model::book::BookRole::Participant if chapter.is_visible => {
                 Ok(next.run(request).await)
             }
-            crate::db::book::BookRole::Guest {
+            crate::model::book::BookRole::Guest {
                 chapter_ids: guest_chapter_ids,
             } if chapter.is_visible && guest_chapter_ids.contains(&chapter.chapter_id) => {
                 Ok(next.run(request).await)
@@ -124,7 +124,7 @@ pub mod mw {
     }
 
     pub(super) async fn confirm_chapter_open(
-        Extension(chapter): Extension<crate::db::chapter::Chapter>,
+        Extension(chapter): Extension<crate::model::chapter::Chapter>,
         request: Request,
         next: axum::middleware::Next,
     ) -> Result<Response<Body>, ErrorResponse> {

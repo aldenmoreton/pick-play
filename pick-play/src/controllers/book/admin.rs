@@ -7,7 +7,7 @@ use axum_ctx::RespErr;
 use reqwest::StatusCode;
 
 use crate::{
-    auth::AuthSession, db::book::BookSubscription, templates::authenticated, AppError, AppStateRef,
+    auth::AuthSession, model::book::BookSubscription, view::authenticated, AppError, AppStateRef,
 };
 
 pub async fn handler(

@@ -2,7 +2,7 @@ use axum::{http::StatusCode, response::Redirect, Form};
 use axum_ctx::RespErr;
 use serde::Deserialize;
 
-use crate::{auth::AuthSession, db::book::BookRole, AppError};
+use crate::{auth::AuthSession, model::book::BookRole, AppError};
 
 #[derive(Deserialize)]
 pub struct Params {

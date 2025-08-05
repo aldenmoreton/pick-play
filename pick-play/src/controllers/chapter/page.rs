@@ -1,16 +1,16 @@
 use std::collections::HashMap;
 
-use crate::db::book::BookRole;
-use crate::db::chapter::{get_chapter_users, ChapterUser};
-use crate::db::event::{
+use crate::model::book::BookRole;
+use crate::model::chapter::{get_chapter_users, ChapterUser};
+use crate::model::event::{
     get_chapter_picks, get_events, get_picks, ChapterPick, ChapterPickHash, Event, EventContent,
 };
-use crate::db::team::get_chapter_teams;
+use crate::model::team::get_chapter_teams;
 
 use crate::AppNotification;
 use crate::{
     auth::{AuthSession, BackendPgDB},
-    db::{book::BookSubscription, chapter::Chapter},
+    model::{book::BookSubscription, chapter::Chapter},
     AppError,
 };
 
@@ -32,7 +32,7 @@ pub async fn open_book(
     let user_picks = user_picks.await.map_err(AppError::from)?;
     let relevent_teams = relevent_teams.await.map_err(AppError::from)?;
 
-    Ok(crate::templates::chapter_open::markup(
+    Ok(crate::view::chapter_open::markup(
         &user.username,
         &book_subscription.name,
         chapter,
@@ -241,7 +241,7 @@ pub async fn closed_book(
 
     let user_picks = get_chapter_picks(chapter.chapter_id, &pool).await?;
 
-    Ok(crate::templates::authenticated(
+    Ok(crate::view::authenticated(
         &curr_user.username,
         None,
         None,

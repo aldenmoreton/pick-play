@@ -1,4 +1,4 @@
-use crate::db::book::BookSubscription;
+use crate::model::book::BookSubscription;
 
 pub fn markup(books: Vec<BookSubscription>) -> maud::Markup {
     maud::html! {

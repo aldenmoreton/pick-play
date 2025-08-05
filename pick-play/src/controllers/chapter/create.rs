@@ -8,7 +8,7 @@ use axum_ctx::{RespErr, RespErrCtx, RespErrExt};
 
 use crate::{
     auth::AuthSession,
-    db::{
+    model::{
         book::BookSubscription,
         event::{EventContent, EventType},
         spread::Spread,
@@ -22,7 +22,7 @@ pub async fn get(
     Extension(book_subscription): Extension<BookSubscription>,
 ) -> Result<maud::Markup, RespErr> {
     let username = auth_session.user.ok_or(AppError::BackendUser)?.username;
-    Ok(crate::templates::chapter_create::markup(
+    Ok(crate::view::chapter_create::markup(
         &username,
         &book_subscription.name,
     ))
@@ -37,7 +37,7 @@ pub enum AddEventType {
 }
 
 pub async fn add_event(Query(ty): Query<AddEventType>) -> maud::Markup {
-    crate::templates::add_event::markup(ty)
+    crate::view::add_event::markup(ty)
 }
 
 #[derive(serde::Deserialize)]
@@ -55,7 +55,7 @@ pub struct TeamSelect {
 }
 
 pub async fn team_select(Json(team): Json<TeamSelect>) -> maud::Markup {
-    crate::templates::team_select::markup(team)
+    crate::view::team_select::markup(team)
 }
 
 #[derive(Debug, serde::Deserialize)]

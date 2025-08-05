@@ -2,11 +2,11 @@ use axum::{extract::State, Extension};
 
 use crate::{
     auth::{AuthSession, BackendPgDB},
-    db::{
+    model::{
         book::{BookRole, BookSubscription},
         chapter::get_chapters,
     },
-    templates::chapter_list,
+    view::chapter_list,
     AppError, AppStateRef,
 };
 
@@ -24,7 +24,7 @@ pub async fn handler(
         None
     };
 
-    Ok(crate::templates::authenticated(
+    Ok(crate::view::authenticated(
         &user.username,
         Some(&book_subscription.name),
         None,

@@ -1,4 +1,4 @@
-use crate::db::team::Team;
+use crate::model::team::Team;
 
 pub fn markup(teams: Vec<Team>, location: &str) -> maud::Markup {
     maud::html! {
