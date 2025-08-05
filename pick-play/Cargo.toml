@@ -44,9 +44,3 @@ shuttle = ["dep:shuttle-axum", "dep:shuttle-runtime", "dep:shuttle-shared-db"]
 
 [dev-dependencies]
 axum-macros = "0.5.0"
-
-[profile.dev]
-opt-level = 1
-
-[profile.dev.package."*"]
-opt-level = 1
