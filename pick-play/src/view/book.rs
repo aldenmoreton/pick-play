@@ -52,7 +52,7 @@ pub fn m(
                     summary class="p-3 my-1 align-middle bg-green-500 rounded-lg shadow-md select-none cursor-pointer" {
                         "Leaderboard"
                     }
-                    div hx-get="leaderboard" hx-trigger="load" hx-swap="outerhtml" class="absolute z-10 w-full mt-2 bg-white border border-gray-300 rounded-lg shadow-lg" {
+                    div hx-get="leaderboard" hx-trigger="load" hx-swap="outerhtml" class="w-full mt-2 bg-white border border-gray-300 rounded-lg shadow-lg" {
                         "Loading..."
                     }
                 }
