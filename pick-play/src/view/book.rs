@@ -47,12 +47,12 @@ pub fn m(
                 }
             }
 
-            div class="flex items-center justify-center" {
-                details class="flex items-center w-max" {
-                    summary class="p-3 my-1 align-middle bg-green-500 rounded-lg shadow-md select-none" {
+            div class="flex items-center justify-center w-full" {
+                details class="w-auto relative" {
+                    summary class="p-3 my-1 align-middle bg-green-500 rounded-lg shadow-md select-none cursor-pointer" {
                         "Leaderboard"
                     }
-                    div hx-get="leaderboard" hx-trigger="load" hx-swap="outerhtml" class="flex items-center" {
+                    div hx-get="leaderboard" hx-trigger="load" hx-swap="outerhtml" class="absolute z-10 w-full mt-2 bg-white border border-gray-300 rounded-lg shadow-lg" {
                         "Loading..."
                     }
                 }

@@ -40,8 +40,8 @@ pub async fn leaderboard(
     let rankings = crate::model::book::leaderboard(book_subscription.id, pool).await?;
 
     Ok(maud::html! {
-        div class="flex justify-center w-max" {
-            table class="text-sm w-max" {
+        div class="flex justify-center w-full" {
+            table class="text-sm w-auto max-w-md" {
                 thead class="text-xs text-gray-700 uppercase bg-green-400" {
                     tr {
                         th scope="col" class="px-6 py-3" { "Rank" }
