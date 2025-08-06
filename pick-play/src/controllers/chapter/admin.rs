@@ -76,7 +76,7 @@ pub async fn post(
 ) -> Result<AppNotification, AppNotification> {
     let pool = &state.pool;
 
-    let events = get_events(chapter.chapter_id, &pool)
+    let events = get_events(chapter.chapter_id, pool)
         .await
         .map_err(AppError::from)?;
 

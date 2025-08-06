@@ -148,46 +148,6 @@ pub struct BookRanking {
     pub rank: i32,
 }
 
-pub async fn book_rankings(book_id: i32, pool: &PgPool) -> Result<Vec<BookRanking>, sqlx::Error> {
-    sqlx::query_as!(
-        BookRanking,
-        r#"
-        WITH user_event_points AS (
-          SELECT
-            p.user_id,
-            p.book_id,
-            COALESCE(SUM(p.points)::INT, 0) AS event_points
-          FROM picks p
-          WHERE p.book_id = $1
-          GROUP BY p.user_id, p.book_id
-        ),
-        user_added_points AS (
-          SELECT
-            ap.user_id,
-            ap.book_id,
-            COALESCE(SUM(ap.points)::INT, 0) AS extra_points
-          FROM added_points ap
-          WHERE ap.book_id = $1
-          GROUP BY ap.user_id, ap.book_id
-        )
-        SELECT
-          s.user_id,
-          u.username,
-          COALESCE(uep.event_points, 0) + COALESCE(uap.extra_points, 0) AS "points!",
-          RANK() OVER (ORDER BY (COALESCE(uep.event_points, 0) + COALESCE(uap.extra_points, 0)) DESC)::INT as "rank!"
-        FROM subscriptions s
-        JOIN users u ON s.user_id = u.id
-        LEFT JOIN user_event_points uep ON s.user_id = uep.user_id AND s.book_id = uep.book_id
-        LEFT JOIN user_added_points uap ON s.user_id = uap.user_id AND s.book_id = uap.book_id
-        WHERE s.book_id = $1
-        ORDER BY "points!" DESC
-        "#,
-        book_id
-    )
-    .fetch_all(pool)
-    .await
-}
-
 pub async fn book_rank(
     user_id: i32,
     book_id: i32,
@@ -245,4 +205,54 @@ pub async fn book_rank(
     )
     .fetch_one(pool)
     .await
+}
+
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct BookRankingStats {
+    pub user_id: i32,
+    pub username: String,
+    pub earned_points: i32,
+    pub added_points: i32,
+    pub total_points: i32,
+    pub rank: i32,
+}
+
+pub async fn leaderboard(
+    book_id: i32,
+    pool: &PgPool,
+) -> Result<Vec<BookRankingStats>, sqlx::Error> {
+    sqlx::query_as!(
+        BookRankingStats,
+        r#"
+        WITH earned_points AS (
+           	SELECT
+          		user_id,
+          		COALESCE(SUM(points)::INT, 0) AS points
+           	FROM picks
+           	WHERE book_id = $1
+           	GROUP BY user_id
+        ), added_points AS (
+           	SELECT
+          		user_id,
+          		COALESCE(SUM(points)::INT, 0) AS points
+           	FROM added_points
+           	WHERE book_id = $1
+           	GROUP BY user_id
+        )
+        SELECT
+           	users.id AS "user_id!",
+           	users.USERNAME AS "username!",
+           	COALESCE(earned_points.points, 0) AS "earned_points!",
+           	COALESCE(ADDED_POINTS.points, 0) AS "added_points!",
+           	COALESCE(earned_points.points, 0) + COALESCE(ADDED_POINTS.points, 0) AS "total_points!",
+           	RANK() OVER (ORDER BY COALESCE(earned_points.points, 0) + COALESCE(ADDED_POINTS.points, 0) DESC)::INT AS "rank!"
+        FROM subscriptions
+        JOIN users ON subscriptions.user_id = users.id
+        LEFT JOIN earned_points ON users.id = earned_points.user_id
+        LEFT JOIN added_points ON users.id = added_points.user_id
+        WHERE subscriptions.book_id = $1
+        ORDER BY "total_points!" DESC
+        "#,
+        book_id
+    ).fetch_all(pool).await
 }

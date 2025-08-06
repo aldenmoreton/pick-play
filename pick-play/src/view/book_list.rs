@@ -13,7 +13,10 @@ pub fn markup(books: Vec<BookSubscriptionStats>) -> maud::Markup {
                     li class="p-3 h-30 w-60" {
                         div class="border border-gray-300 justify-center object-fill max-w-sm overflow-hidden bg-white rounded-lg shadow-lg" {
                             a href={"/book/"(book.id)"/"} class="object-fill" {
-                                h1 class="text-2xl font-bold" { (book.name) }
+                                div {
+                                    h1 class="text-2xl font-bold" { (book.name) }
+                                    p class="text-xs italic" { (book.num_members) " Members" }
+                                }
                                 @if book.num_members > 1 {
                                     p {
                                         (book.rank)
@@ -29,8 +32,6 @@ pub fn markup(books: Vec<BookSubscriptionStats>) -> maud::Markup {
                                             "th"
                                         }
                                         " - " (book.user_points) " Points"
-                                        br;
-                                        span class="italic" { (book.num_members) " Members" }
                                     }
                                 }
                             }

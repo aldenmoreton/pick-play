@@ -7,7 +7,7 @@ use tower_sessions_sqlx_store::PostgresStore;
 pub async fn shuttle(
     #[shuttle_runtime::Secrets] secrets: shuttle_runtime::SecretStore,
     #[shuttle_shared_db::Postgres(
-        local_uri = "postgres://postgres:postgres@localhost:5432/joes-book"
+        local_uri = "postgres://postgres:postgres@localhost:5432/pick-play"
     )]
     pool: sqlx::PgPool,
 ) -> shuttle_axum::ShuttleAxum {
