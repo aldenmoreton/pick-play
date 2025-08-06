@@ -16,19 +16,19 @@ pub fn markup(books: Vec<BookSubscriptionStats>) -> maud::Markup {
                                 h1 class="text-2xl font-bold" { (book.name) }
                                 @if book.num_members > 1 {
                                     p {
+                                        (book.rank)
                                         @if book.rank == 1 {
-                                            span class="text-green-500" { "First Place" }
+                                            "st"
                                         } @else if book.rank == 2 {
-                                            span class="text-green-500" { "Second Place" }
+                                            "nd"
                                         } @else if book.rank == 3 {
-                                            span class="text-green-500" { "Third Place" }
+                                            "rd"
                                         } @else if book.rank == book.num_members {
-                                            span class="text-orange-950" { "Last Place" }
+                                            span class="text-orange-950" { "Last" }
                                         } @else {
-                                            (book.rank) "th Place"
+                                            "th"
                                         }
-                                        br;
-                                        (book.user_points) " Points"
+                                        " - " (book.user_points) " Points"
                                         br;
                                         span class="italic" { (book.num_members) " Members" }
                                     }

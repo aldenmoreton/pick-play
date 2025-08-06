@@ -27,8 +27,17 @@ where
                                     @if chapter.is_open {
                                         span class="text-green-500" { "Open" }
                                     } @else {
-                                        "1st Place"
-                                        br;
+                                        (chapter.user_rank)
+                                        @if chapter.user_rank == 1 {
+                                            "st"
+                                        } @else if chapter.user_rank == 2 {
+                                            "nd"
+                                        } @else if chapter.user_rank == 3 {
+                                            "rd"
+                                        } @else {
+                                            "th"
+                                        }
+                                        " - "
                                         (chapter.user_points) "/" (chapter.total_points) " Points"
                                     }
                                 }

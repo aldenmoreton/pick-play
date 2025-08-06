@@ -88,6 +88,7 @@ pub struct ChapterStats {
     pub title: String,
     pub total_points: i32,
     pub user_points: i32,
+    pub user_rank: i32,
     pub is_open: bool,
     pub is_visible: bool,
 }
@@ -119,7 +120,17 @@ pub async fn get_chapters_with_stats(
                 SELECT COALESCE(SUM(points)::INT, 0)
                 FROM picks
                 WHERE user_id = $1 AND chapter_id = c.id
-            ) AS "user_points!"
+            ) AS "user_points!",
+            (
+                SELECT COALESCE(rank, 0)::INT
+                FROM (
+                    SELECT user_id, RANK() OVER (ORDER BY SUM(points) DESC) as rank
+                    FROM picks
+                    WHERE chapter_id = c.id
+                    GROUP BY user_id
+                ) ranked_users
+                WHERE user_id = $1
+            ) AS "user_rank!"
         FROM chapters AS c
         WHERE book_id = $2
         ORDER BY c.created_at DESC
