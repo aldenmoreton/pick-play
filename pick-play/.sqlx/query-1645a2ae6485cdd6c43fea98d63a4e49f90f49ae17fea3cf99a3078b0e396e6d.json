@@ -9,7 +9,7 @@
         "Int4",
         {
           "Custom": {
-            "name": "_event_types",
+            "name": "event_types[]",
             "kind": {
               "Array": {
                 "Custom": {

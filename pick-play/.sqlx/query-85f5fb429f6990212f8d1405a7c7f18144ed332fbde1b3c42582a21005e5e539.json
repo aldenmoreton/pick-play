@@ -1,0 +1,59 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            c.id,\n            c.title,\n            c.is_open,\n            c.is_visible,\n            (\n                SELECT\n                    COALESCE(SUM(CASE\n                        WHEN event_type = 'spread_group' THEN (SELECT SUM(num) FROM generate_series(1, JSONB_ARRAY_LENGTH(contents->'spread_group')) AS num)\n                        WHEN event_type = 'user_input' THEN (contents->'user_input'->>'points')::INT\n                        ELSE 0\n                    END), 0)\n                FROM events\n                WHERE events.chapter_id = c.id\n            )::INT AS \"total_points!\",\n            (\n                SELECT COALESCE(SUM(points)::INT, 0)\n                FROM picks\n                WHERE user_id = $1 AND chapter_id = c.id\n            ) AS \"user_points!\",\n            (\n                SELECT COALESCE(rank, 0)::INT\n                FROM (\n                    SELECT user_id, RANK() OVER (ORDER BY SUM(points) DESC) as rank\n                    FROM picks\n                    WHERE chapter_id = c.id\n                    GROUP BY user_id\n                ) ranked_users\n                WHERE user_id = $1\n            ) AS \"user_rank!\"\n        FROM chapters AS c\n        WHERE book_id = $2\n        ORDER BY c.created_at DESC\n    ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "title",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "is_open",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 3,
+        "name": "is_visible",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 4,
+        "name": "total_points!",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "user_points!",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "user_rank!",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "85f5fb429f6990212f8d1405a7c7f18144ed332fbde1b3c42582a21005e5e539"
+}

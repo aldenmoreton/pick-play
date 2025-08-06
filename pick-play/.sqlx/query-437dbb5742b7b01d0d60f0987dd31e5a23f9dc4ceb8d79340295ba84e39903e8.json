@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        WITH user_event_points AS (\n          SELECT\n            p.user_id,\n            p.book_id,\n            COALESCE(SUM(p.points)::INT, 0) AS event_points\n          FROM picks p\n          WHERE p.book_id = $1\n          GROUP BY p.user_id, p.book_id\n        ),\n        user_added_points AS (\n          SELECT\n            ap.user_id,\n            ap.book_id,\n            COALESCE(SUM(ap.points)::INT, 0) AS extra_points\n          FROM added_points ap\n          WHERE ap.book_id = $1\n          GROUP BY ap.user_id, ap.book_id\n        )\n        SELECT\n          s.user_id,\n          u.username,\n          COALESCE(uep.event_points, 0) + COALESCE(uap.extra_points, 0) AS \"points!\",\n          RANK() OVER (ORDER BY (COALESCE(uep.event_points, 0) + COALESCE(uap.extra_points, 0)) DESC)::INT as \"rank!\"\n        FROM subscriptions s\n        JOIN users u ON s.user_id = u.id\n        LEFT JOIN user_event_points uep ON s.user_id = uep.user_id AND s.book_id = uep.book_id\n        LEFT JOIN user_added_points uap ON s.user_id = uap.user_id AND s.book_id = uap.book_id\n        WHERE s.book_id = $1\n        ORDER BY \"points!\" DESC\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "username",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "points!",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "rank!",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "437dbb5742b7b01d0d60f0987dd31e5a23f9dc4ceb8d79340295ba84e39903e8"
+}

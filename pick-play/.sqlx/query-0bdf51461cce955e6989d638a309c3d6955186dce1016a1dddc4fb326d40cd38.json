@@ -1,0 +1,41 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        WITH user_event_points AS (\n          -- Points from picks/events\n          SELECT\n            p.user_id,\n            p.book_id,\n            COALESCE(SUM(p.points), 0) AS event_points\n          FROM picks p\n          WHERE p.book_id = $2  -- Replace $1 with the specific book_id\n          GROUP BY p.user_id, p.book_id\n        ),\n        user_added_points AS (\n          -- Extra/added points\n          SELECT\n            ap.user_id,\n            ap.book_id,\n            COALESCE(SUM(ap.points), 0) AS extra_points\n          FROM added_points ap\n          WHERE ap.book_id = $2  -- Replace $1 with the specific book_id\n          GROUP BY ap.user_id, ap.book_id\n        ),\n        user_rankings AS (\n          -- Calculate rankings for ALL users first\n          SELECT\n            s.user_id,\n            s.book_id,\n            u.username,\n            COALESCE(uep.event_points, 0) + COALESCE(uap.extra_points, 0) AS total_points,\n            RANK() OVER (ORDER BY (COALESCE(uep.event_points, 0) + COALESCE(uap.extra_points, 0)) DESC) as ranking\n          FROM subscriptions s\n          JOIN users u ON s.user_id = u.id\n          LEFT JOIN user_event_points uep ON s.user_id = uep.user_id AND s.book_id = uep.book_id\n          LEFT JOIN user_added_points uap ON s.user_id = uap.user_id AND s.book_id = uap.book_id\n          WHERE s.book_id = $2  -- Replace $1 with the specific book_id\n        )\n        -- Now filter to show only the specific user's ranking\n        SELECT\n          user_id,\n          username,\n          total_points::INT AS \"points!\",\n          ranking::INT AS \"rank!\"\n        FROM user_rankings\n        WHERE user_id = $1  -- Replace $2 with the specific user_id\n        ORDER BY ranking;\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "username",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "points!",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "rank!",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "0bdf51461cce955e6989d638a309c3d6955186dce1016a1dddc4fb326d40cd38"
+}

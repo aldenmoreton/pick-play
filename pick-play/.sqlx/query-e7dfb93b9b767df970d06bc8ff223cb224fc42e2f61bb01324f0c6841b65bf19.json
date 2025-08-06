@@ -1,0 +1,64 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        WITH user_book_stats AS (\n            SELECT\n                book_id,\n                user_id,\n                -- Calculate total points from picks/events\n                COALESCE((\n                    SELECT SUM(p.points)\n                    FROM picks p\n                    WHERE p.book_id = s.book_id AND p.user_id = s.user_id\n                ), 0) +\n                -- Calculate total extra points\n                COALESCE((\n                    SELECT SUM(ap.points)\n                    FROM added_points ap\n                    WHERE ap.book_id = s.book_id AND ap.user_id = s.user_id\n                ), 0) AS total_points\n            FROM subscriptions s\n        ),\n        user_rankings AS (\n            SELECT\n                book_id,\n                user_id,\n                total_points,\n                RANK() OVER (PARTITION BY book_id ORDER BY total_points DESC) as user_rank\n            FROM user_book_stats\n        )\n        SELECT\n            b.id AS \"id!\",\n            b.name AS \"name!\",\n            (SELECT COUNT(*) FROM subscriptions WHERE book_id = b.id)::INT AS \"num_members!\",\n            (SELECT c.id FROM chapters AS c WHERE c.book_id = b.id ORDER BY c.created_at DESC LIMIT 1) AS recent_chapter_id,\n            (SELECT c.title FROM chapters AS c WHERE c.book_id = b.id ORDER BY c.created_at DESC LIMIT 1) AS recent_chapter_title,\n            (SELECT c.is_open FROM chapters AS c WHERE c.book_id = b.id ORDER BY c.created_at DESC LIMIT 1) AS recent_chapter_is_open,\n            ur.total_points::INT AS \"user_points!\",\n            ur.user_rank::INT AS \"rank!\"\n        FROM subscriptions AS s\n        JOIN books AS b ON s.book_id = b.id\n        LEFT JOIN user_rankings ur ON ur.book_id = b.id AND ur.user_id = s.user_id\n        WHERE s.user_id = $1\n        ORDER BY b.created_at DESC;\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "name!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "num_members!",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "recent_chapter_id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "recent_chapter_title",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "recent_chapter_is_open",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 6,
+        "name": "user_points!",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 7,
+        "name": "rank!",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "e7dfb93b9b767df970d06bc8ff223cb224fc42e2f61bb01324f0c6841b65bf19"
+}
