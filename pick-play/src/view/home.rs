@@ -1,8 +1,8 @@
-use crate::{model::book::BookSubscription, view::book_list};
+use crate::{model::book::BookSubscriptionStats, view::book_list};
 
 use super::authenticated;
 
-pub fn m(username: &str, is_admin: bool, books: Vec<BookSubscription>) -> maud::Markup {
+pub fn m(username: &str, is_admin: bool, books: Vec<BookSubscriptionStats>) -> maud::Markup {
     authenticated(
         username,
         Some("Home"),

@@ -27,6 +27,7 @@ pub mod model {
     pub mod book;
     pub mod chapter;
     pub mod event;
+    pub mod player_ranking;
     pub mod spread;
     pub mod team;
     pub mod user;

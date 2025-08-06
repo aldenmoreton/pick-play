@@ -73,3 +73,176 @@ pub async fn get_book_users(book_id: i32, pool: &PgPool) -> Result<Box<[(i32, St
     .map(|r| (r.id, r.username))
     .collect())
 }
+
+#[derive(Debug, sqlx::FromRow)]
+pub struct BookSubscriptionStats {
+    pub id: i32,
+    pub name: String,
+    pub num_members: i32,
+    pub rank: i32,
+    pub user_points: i32,
+    pub recent_chapter_id: Option<i32>,
+    pub recent_chapter_title: Option<String>,
+    pub recent_chapter_is_open: Option<bool>,
+}
+
+pub async fn user_books_stats(
+    user_id: i32,
+    pool: &PgPool,
+) -> Result<Vec<BookSubscriptionStats>, sqlx::Error> {
+    sqlx::query_as!(
+        BookSubscriptionStats,
+        r#"
+        WITH user_book_stats AS (
+            SELECT
+                book_id,
+                user_id,
+                -- Calculate total points from picks/events
+                COALESCE((
+                    SELECT SUM(p.points)
+                    FROM picks p
+                    WHERE p.book_id = s.book_id AND p.user_id = s.user_id
+                ), 0) +
+                -- Calculate total extra points
+                COALESCE((
+                    SELECT SUM(ap.points)
+                    FROM added_points ap
+                    WHERE ap.book_id = s.book_id AND ap.user_id = s.user_id
+                ), 0) AS total_points
+            FROM subscriptions s
+        ),
+        user_rankings AS (
+            SELECT
+                book_id,
+                user_id,
+                total_points,
+                RANK() OVER (PARTITION BY book_id ORDER BY total_points DESC) as user_rank
+            FROM user_book_stats
+        )
+        SELECT
+            b.id AS "id!",
+            b.name AS "name!",
+            (SELECT COUNT(*) FROM subscriptions WHERE book_id = b.id)::INT AS "num_members!",
+            (SELECT c.id FROM chapters AS c WHERE c.book_id = b.id ORDER BY c.created_at DESC LIMIT 1) AS recent_chapter_id,
+            (SELECT c.title FROM chapters AS c WHERE c.book_id = b.id ORDER BY c.created_at DESC LIMIT 1) AS recent_chapter_title,
+            (SELECT c.is_open FROM chapters AS c WHERE c.book_id = b.id ORDER BY c.created_at DESC LIMIT 1) AS recent_chapter_is_open,
+            ur.total_points::INT AS "user_points!",
+            ur.user_rank::INT AS "rank!"
+        FROM subscriptions AS s
+        JOIN books AS b ON s.book_id = b.id
+        LEFT JOIN user_rankings ur ON ur.book_id = b.id AND ur.user_id = s.user_id
+        WHERE s.user_id = $1
+        ORDER BY b.created_at DESC;
+        "#,
+        user_id
+    )
+    .fetch_all(pool)
+    .await
+}
+
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct BookRanking {
+    pub user_id: i32,
+    pub username: String,
+    pub points: i32,
+    pub rank: i32,
+}
+
+pub async fn book_rankings(book_id: i32, pool: &PgPool) -> Result<Vec<BookRanking>, sqlx::Error> {
+    sqlx::query_as!(
+        BookRanking,
+        r#"
+        WITH user_event_points AS (
+          SELECT
+            p.user_id,
+            p.book_id,
+            COALESCE(SUM(p.points)::INT, 0) AS event_points
+          FROM picks p
+          WHERE p.book_id = $1
+          GROUP BY p.user_id, p.book_id
+        ),
+        user_added_points AS (
+          SELECT
+            ap.user_id,
+            ap.book_id,
+            COALESCE(SUM(ap.points)::INT, 0) AS extra_points
+          FROM added_points ap
+          WHERE ap.book_id = $1
+          GROUP BY ap.user_id, ap.book_id
+        )
+        SELECT
+          s.user_id,
+          u.username,
+          COALESCE(uep.event_points, 0) + COALESCE(uap.extra_points, 0) AS "points!",
+          RANK() OVER (ORDER BY (COALESCE(uep.event_points, 0) + COALESCE(uap.extra_points, 0)) DESC)::INT as "rank!"
+        FROM subscriptions s
+        JOIN users u ON s.user_id = u.id
+        LEFT JOIN user_event_points uep ON s.user_id = uep.user_id AND s.book_id = uep.book_id
+        LEFT JOIN user_added_points uap ON s.user_id = uap.user_id AND s.book_id = uap.book_id
+        WHERE s.book_id = $1
+        ORDER BY "points!" DESC
+        "#,
+        book_id
+    )
+    .fetch_all(pool)
+    .await
+}
+
+pub async fn book_rank(
+    user_id: i32,
+    book_id: i32,
+    pool: &PgPool,
+) -> Result<BookRanking, sqlx::Error> {
+    sqlx::query_as!(
+        BookRanking,
+        r#"
+        WITH user_event_points AS (
+          -- Points from picks/events
+          SELECT
+            p.user_id,
+            p.book_id,
+            COALESCE(SUM(p.points), 0) AS event_points
+          FROM picks p
+          WHERE p.book_id = $2  -- Replace $1 with the specific book_id
+          GROUP BY p.user_id, p.book_id
+        ),
+        user_added_points AS (
+          -- Extra/added points
+          SELECT
+            ap.user_id,
+            ap.book_id,
+            COALESCE(SUM(ap.points), 0) AS extra_points
+          FROM added_points ap
+          WHERE ap.book_id = $2  -- Replace $1 with the specific book_id
+          GROUP BY ap.user_id, ap.book_id
+        ),
+        user_rankings AS (
+          -- Calculate rankings for ALL users first
+          SELECT
+            s.user_id,
+            s.book_id,
+            u.username,
+            COALESCE(uep.event_points, 0) + COALESCE(uap.extra_points, 0) AS total_points,
+            RANK() OVER (ORDER BY (COALESCE(uep.event_points, 0) + COALESCE(uap.extra_points, 0)) DESC) as ranking
+          FROM subscriptions s
+          JOIN users u ON s.user_id = u.id
+          LEFT JOIN user_event_points uep ON s.user_id = uep.user_id AND s.book_id = uep.book_id
+          LEFT JOIN user_added_points uap ON s.user_id = uap.user_id AND s.book_id = uap.book_id
+          WHERE s.book_id = $2  -- Replace $1 with the specific book_id
+        )
+        -- Now filter to show only the specific user's ranking
+        SELECT
+          user_id,
+          username,
+          total_points::INT AS "points!",
+          ranking::INT AS "rank!"
+        FROM user_rankings
+        WHERE user_id = $1  -- Replace $2 with the specific user_id
+        ORDER BY ranking;
+        "#,
+        user_id,
+        book_id
+    )
+    .fetch_one(pool)
+    .await
+}

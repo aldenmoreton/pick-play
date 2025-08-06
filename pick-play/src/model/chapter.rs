@@ -82,3 +82,51 @@ pub async fn get_chapter_users(
     .await
     .map_err(AppError::from)
 }
+
+pub struct ChapterStats {
+    pub id: i32,
+    pub title: String,
+    pub total_points: i32,
+    pub user_points: i32,
+    pub is_open: bool,
+    pub is_visible: bool,
+}
+
+pub async fn get_chapters_with_stats(
+    user_id: i32,
+    book_id: i32,
+    pool: &PgPool,
+) -> Result<Vec<ChapterStats>, sqlx::Error> {
+    sqlx::query_as!(
+        ChapterStats,
+        r#"
+        SELECT
+            c.id,
+            c.title,
+            c.is_open,
+            c.is_visible,
+            (
+                SELECT
+                    COALESCE(SUM(CASE
+                        WHEN event_type = 'spread_group' THEN (SELECT SUM(num) FROM generate_series(1, JSONB_ARRAY_LENGTH(contents->'spread_group')) AS num)
+                        WHEN event_type = 'user_input' THEN (contents->'user_input'->>'points')::INT
+                        ELSE 0
+                    END), 0)
+                FROM events
+                WHERE events.chapter_id = c.id
+            )::INT AS "total_points!",
+            (
+                SELECT COALESCE(SUM(points)::INT, 0)
+                FROM picks
+                WHERE user_id = $1 AND chapter_id = c.id
+            ) AS "user_points!"
+        FROM chapters AS c
+        WHERE book_id = $2
+        ORDER BY c.created_at DESC
+    "#,
+        user_id,
+        book_id
+    )
+    .fetch_all(pool)
+    .await
+}

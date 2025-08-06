@@ -1,12 +1,14 @@
 use maud::{html, Markup, DOCTYPE};
 
 pub mod add_event;
+pub mod book;
 pub mod book_list;
 pub mod chapter;
 pub mod finish_signup;
 pub mod home;
 pub mod legacy_login;
 pub mod login;
+pub mod player_rankings;
 pub mod signup;
 pub mod team_search;
 pub mod team_select;

@@ -29,7 +29,7 @@ pub fn router() -> Router<AppStateRef> {
                 .route_layer(middleware::from_fn(mw::require_admin))
                 .nest("/chapter/", chapter::router())
                 .route("/leaderboard", get(page::leaderboard))
-                .route("/", get(page::handler)),
+                .route("/", get(page::book_page)),
         )
         .route_layer(middleware::from_fn(mw::require_member))
         .route(
