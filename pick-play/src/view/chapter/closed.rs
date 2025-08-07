@@ -262,6 +262,30 @@ fn spread_tile(
     user_picks: &HashMap<ChapterPickHash, ChapterPick>,
     relevent_teams: &HashMap<i32, (String, Option<String>)>,
 ) -> maud::Markup {
+    let mut points_wagered = 0;
+    let mut points_awarded = 0;
+    for user in users {
+        if let Some(ChapterPick::SpreadGroup { choice, wager, .. }) =
+            user_picks.get(&ChapterPickHash {
+                event_id: event.id,
+                user_id: user.user_id,
+            })
+        {
+            points_wagered += wager[index];
+            match &event.contents.0 {
+                EventContent::SpreadGroup(spreads)
+                    if spreads[index]
+                        .answer
+                        .as_ref()
+                        .map(|ans| *ans == choice[index])
+                        .unwrap_or_default() =>
+                {
+                    points_awarded += wager[index]
+                }
+                _ => (),
+            }
+        }
+    }
     maud::html!(
         div class="bg-white border border-gray-300 rounded-lg shadow-md" {
             div class="p-4 pb-2" {
@@ -276,6 +300,9 @@ fn spread_tile(
                         span class="text-sm font-normal text-gray-500" { (format!(" ({:+})", spread.home_spread)) }
                     }
                 }
+                p { "Points" }
+                p { "Wagered " (points_wagered) }
+                p { "Awarded " (points_awarded) }
             }
             div class="p-4 pt-0" {
                 div class="space-y-2" {
