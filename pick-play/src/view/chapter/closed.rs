@@ -82,12 +82,12 @@ fn user_points(
     let mut total = 0;
 
     for event in events {
-        let user_pick = &user_picks[&ChapterPickHash {
+        let user_pick = user_picks.get(&ChapterPickHash {
             event_id: event.id,
             user_id: user.user_id,
-        }];
+        });
         match (&event.contents.0, &user_pick) {
-            (EventContent::SpreadGroup(spreads), ChapterPick::SpreadGroup { choice, .. }) => {
+            (EventContent::SpreadGroup(spreads), Some(ChapterPick::SpreadGroup { choice, .. })) => {
                 correct += spreads
                     .iter()
                     .zip(choice)
@@ -95,7 +95,11 @@ fn user_points(
                     .count() as i32;
                 total += spreads.len() as i32;
             }
-            (EventContent::UserInput(input), ChapterPick::UserInput { choice, .. }) => {
+            (EventContent::SpreadGroup(spreads), None) => {
+                total += spreads.len() as i32;
+            }
+            (EventContent::UserInput(_), None) => total += 1 as i32,
+            (EventContent::UserInput(input), Some(ChapterPick::UserInput { choice, .. })) => {
                 correct += input
                     .acceptable_answers
                     .as_ref()
@@ -211,9 +215,9 @@ fn user_input_tile(
                 div class="space-y-2" {
                     div class="space-y-2 overflow-y-auto max-h-48 overscroll-contain" {
                         @for user in users {
-                            @let user_pick = &user_picks[&ChapterPickHash{event_id: event.id, user_id: user.user_id}];
+                            @let user_pick = user_picks.get(&ChapterPickHash{event_id: event.id, user_id: user.user_id});
                             @match user_pick {
-                                ChapterPick::UserInput{choice, wager: _wager, points} => {
+                                Some(ChapterPick::UserInput{choice, wager: _wager, points}) => {
                                     @let (bg_color, icon) = match points {
                                         Some(0) => ("bg-red-50 border-red-200", "✗"),
                                         Some(_) => ("bg-green-50 border-green-200", "✓"),
@@ -231,7 +235,16 @@ fn user_input_tile(
                                         }
                                     }
                                 },
-                                _ => {}
+                                _ => div class="flex items-center justify-between p-2 border rounded-md bg-gray-50" {
+                                    div class="flex items-center gap-2" {
+                                        span class="font-medium text-gray-900" { (user.username) }
+                                    }
+                                    div class="text-right" {
+                                        div class="flex items-center gap-1" {
+                                            span class="text-sm text-gray-700 truncate max-w-24" { "No Pick" }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -268,9 +281,9 @@ fn spread_tile(
                 div class="space-y-2" {
                     div class="space-y-2 overflow-y-auto max-h-48 overscroll-contain" {
                         @for user in users {
-                            @let user_pick = &user_picks[&ChapterPickHash{event_id: event.id, user_id: user.user_id}];
+                            @let user_pick = user_picks.get(&ChapterPickHash{event_id: event.id, user_id: user.user_id});
                             @match user_pick {
-                                ChapterPick::SpreadGroup{choice, wager, ..} => {
+                                Some(ChapterPick::SpreadGroup{choice, wager, ..}) => {
                                     @let is_correct = spread.answer.as_ref().map(|a| *a == choice[index]).unwrap_or(false);
                                     @let is_answered = spread.answer.is_some();
                                     @let bg_color = if !is_answered {
@@ -301,7 +314,19 @@ fn spread_tile(
                                         }
                                     }
                                 },
-                                _ => {}
+                                _ => div class="flex items-center justify-between p-2 rounded-md border bg-gray-50{}" {
+                                    div class="flex items-center gap-2" {
+                                        span class="font-medium text-gray-900" { (user.username) }
+                                    }
+                                    div class="text-right" {
+                                        div class="flex items-center gap-1" {
+                                            div class="text-right" {
+                                                p class="text-sm font-medium text-gray-900" { "No Pick" }
+                                                p class="text-xs text-gray-500" { "Wager: 0" }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
