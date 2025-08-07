@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        WITH earned_points AS (\n           \tSELECT\n          \t\tuser_id,\n          \t\tCOALESCE(SUM(points)::INT, 0) AS points\n           \tFROM picks\n           \tWHERE book_id = $1\n           \tGROUP BY user_id\n        ), added_points AS (\n           \tSELECT\n          \t\tuser_id,\n          \t\tCOALESCE(SUM(points)::INT, 0) AS points\n           \tFROM added_points\n           \tWHERE book_id = $1\n           \tGROUP BY user_id\n        )\n        SELECT\n           \tusers.id AS \"user_id!\",\n           \tusers.USERNAME AS \"username!\",\n           \tCOALESCE(earned_points.points, 0) AS \"earned_points!\",\n           \tCOALESCE(ADDED_POINTS.points, 0) AS \"added_points!\",\n           \tCOALESCE(earned_points.points, 0) + COALESCE(ADDED_POINTS.points, 0) AS \"total_points!\",\n           \tRANK() OVER (ORDER BY COALESCE(earned_points.points, 0) + COALESCE(ADDED_POINTS.points, 0) DESC)::INT AS \"rank!\"\n        FROM subscriptions\n        JOIN users ON subscriptions.user_id = users.id\n        LEFT JOIN earned_points ON users.id = earned_points.user_id\n        LEFT JOIN added_points ON users.id = added_points.user_id\n        WHERE subscriptions.book_id = $1\n        ORDER BY \"total_points!\" DESC\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id!",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "username!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "earned_points!",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "added_points!",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "total_points!",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "rank!",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "91e33e5be8df58edbc127d6c479ea4bb503de457924a638d8aa5904529e68d9e"
+}
