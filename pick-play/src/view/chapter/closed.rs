@@ -600,13 +600,9 @@ fn table_rows(
             // Each user
             @for ChapterUser { user_id, username, total_points, rank: _rank } in users {
                 tr class="hover:bg-gray-50" {
-                    td class="px-4 py-3 border-b border-gray-200" {
-                        div class="flex items-center gap-2" {
-                            div {
-                                p class="font-medium text-gray-900" {(username)}
-                                p class="text-sm text-gray-500" {(total_points) " point" (if *total_points != 1 {"s"} else {""})}
-                            }
-                        }
+                    td class="px-4 py-3 border-b border-gray-200 bg-gray-200 opacity-100" {
+                        p class="font-medium text-gray-900" {(username)}
+                        p class="text-sm text-gray-500" {(total_points) " point" (if *total_points != 1 {"s"} else {""})}
                     }
                     // Each event
                     @for event in events {
