@@ -91,7 +91,13 @@ pub fn m(
                     return window.innerWidth < 768; // md breakpoint
                 }
 
+                let currentActiveSection = 'leaderboard'; // Track the current active section
+                let isInitialized = false; // Track if we've initialized
+
                 window.showSection = function(section) {
+                    // Update the current active section
+                    currentActiveSection = section;
+
                     // Only run toggle functionality on mobile screens
                     if (!isMobileScreen()) {
                         return;
@@ -137,8 +143,19 @@ pub fn m(
                 function handleResize() {
                     const sections = ['leaderboard', 'events', 'table'];
                     if (isMobileScreen()) {
-                        // On mobile, initialize with leaderboard
-                        showSection('leaderboard');
+                        // Only initialize on first load, don't reset on subsequent resizes
+                        if (!isInitialized) {
+                            showSection(currentActiveSection);
+                            isInitialized = true;
+                        } else {
+                            // Just ensure the current section is visible without calling showSection
+                            sections.forEach(s => {
+                                const el = document.getElementById(s + '-section');
+                                if (el) {
+                                    el.style.display = s === currentActiveSection ? 'block' : 'none';
+                                }
+                            });
+                        }
                     } else {
                         // On desktop, show all sections
                         sections.forEach(s => {
@@ -147,6 +164,7 @@ pub fn m(
                                 el.style.display = 'block';
                             }
                         });
+                        isInitialized = true;
                     }
                 }
 
