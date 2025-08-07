@@ -24,6 +24,136 @@ pub fn m(
         None,
         Some(maud::html!(
             link rel="stylesheet" id="tailwind" href="/public/styles/chapter-table.css";
+            style {
+                (maud::PreEscaped(r#"
+                .toggle-pill {
+                    position: relative;
+                    background: #f3f4f6;
+                    padding: 4px;
+                    border-radius: 9999px;
+                    display: flex;
+                    box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.1);
+                }
+
+                .toggle-slider {
+                    position: absolute;
+                    top: 4px;
+                    left: 4px;
+                    height: calc(100% - 8px);
+                    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+                    border-radius: 9999px;
+                    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+                    z-index: 1;
+                }
+
+                .toggle-button {
+                    position: relative;
+                    z-index: 2;
+                    flex: 1;
+                    padding: 8px 16px;
+                    text-align: center;
+                    font-size: 14px;
+                    font-weight: 500;
+                    border-radius: 9999px;
+                    transition: color 0.3s ease;
+                    cursor: pointer;
+                    border: none;
+                    background: transparent;
+                    color: #6b7280;
+                }
+
+                .toggle-button.active {
+                    color: white;
+                }
+
+                .toggle-button:not(.active):hover {
+                    color: #374151;
+                }
+
+                @media (min-width: 768px) {
+                    .mobile-toggle-container {
+                        display: none !important;
+                    }
+                }
+                "#))
+            }
+            script {
+                (maud::PreEscaped(r#"
+                function isMobileScreen() {
+                    return window.innerWidth < 768; // md breakpoint
+                }
+
+                window.showSection = function(section) {
+                    // Only run toggle functionality on mobile screens
+                    if (!isMobileScreen()) {
+                        return;
+                    }
+
+                    // Hide all sections
+                    const sections = ['leaderboard', 'events', 'table'];
+                    sections.forEach(s => {
+                        const el = document.getElementById(s + '-section');
+                        if (el) {
+                            el.style.display = 'none';
+                        }
+                    });
+
+                    // Show selected section
+                    const targetSection = document.getElementById(section + '-section');
+                    if (targetSection) {
+                        targetSection.style.display = 'block';
+                    }
+
+                    // Update button states
+                    document.querySelectorAll('.toggle-button').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+
+                    const activeBtn = document.getElementById(section + '-btn');
+                    if (activeBtn) {
+                        activeBtn.classList.add('active');
+                    }
+
+                    // Move slider
+                    const slider = document.querySelector('.toggle-slider');
+                    const buttons = document.querySelectorAll('.toggle-button');
+                    const activeIndex = Array.from(buttons).findIndex(btn => btn.id === section + '-btn');
+
+                    if (slider && activeIndex !== -1) {
+                        const buttonWidth = 100 / buttons.length;
+                        slider.style.width = buttonWidth + '%';
+                        slider.style.transform = 'translateX(' + (activeIndex * 100) + '%)';
+                    }
+                };
+
+                function handleResize() {
+                    const sections = ['leaderboard', 'events', 'table'];
+                    if (isMobileScreen()) {
+                        // On mobile, initialize with leaderboard
+                        showSection('leaderboard');
+                    } else {
+                        // On desktop, show all sections
+                        sections.forEach(s => {
+                            const el = document.getElementById(s + '-section');
+                            if (el) {
+                                el.style.display = 'block';
+                            }
+                        });
+                    }
+                }
+
+                // Initialize on page load
+                document.addEventListener('DOMContentLoaded', function() {
+                    setTimeout(function() {
+                        handleResize();
+                    }, 100);
+                });
+
+                // Handle window resize
+                window.addEventListener('resize', handleResize);
+                "#))
+            }
         )),
         Some(maud::html! {
             p {
@@ -47,15 +177,45 @@ pub fn m(
                     }
 
                 }
-                div class="space-y-6" {
-                    (leaderboard(&chapter.title, users, events, user_picks))
-
-                    div class="mx-4" {
-                        h2 class="mb-4 text-xl font-bold text-gray-900" { "Event Results" }
-                        (event_tiles(events, users, user_picks, relevent_teams))
+                // Mobile toggle buttons (only visible on small screens)
+                div class="mobile-toggle-container mx-4 mb-3" {
+                    div class="toggle-pill max-w-sm mx-auto" {
+                        div class="toggle-slider" {}
+                        button
+                            id="leaderboard-btn"
+                            class="toggle-button active"
+                            onclick="showSection('leaderboard')" {
+                            "Leaderboard"
+                        }
+                        button
+                            id="events-btn"
+                            class="toggle-button"
+                            onclick="showSection('events')" {
+                            "Events"
+                        }
+                        button
+                            id="table-btn"
+                            class="toggle-button"
+                            onclick="showSection('table')" {
+                            "Table"
+                        }
                     }
+                }
 
-                    div class="mx-4 overflow-hidden bg-white border border-gray-200 rounded-lg shadow-md" {
+                // Leaderboard section
+                div id="leaderboard-section" class="block mx-4" {
+                    (leaderboard(&chapter.title, users, events, user_picks))
+                }
+
+                // Events section
+                div id="events-section" class="block mx-4" {
+                    h2 class="mb-4 text-xl font-bold text-gray-900" { "Event Results" }
+                    (event_tiles(events, users, user_picks, relevent_teams))
+                }
+
+                // Table section
+                div id="table-section" class="block mx-4" {
+                    div class="overflow-hidden bg-white border border-gray-200 rounded-lg shadow-md" {
                         div class="p-4 bg-gray-100 border-b" {
                             h2 class="text-xl font-bold text-gray-900" { "Detailed Results Table" }
                         }
@@ -121,7 +281,7 @@ fn leaderboard(
     user_picks: &HashMap<ChapterPickHash, ChapterPick>,
 ) -> maud::Markup {
     maud::html!(
-        div class="mx-4 bg-white border border-gray-300 shadow-lg rounded-xl" {
+        div class="bg-white border border-gray-300 shadow-lg rounded-xl" {
             div class="p-6 pb-4 text-left bg-gray-500 border-b rounded-t-xl" {
                 h1 class="text-2xl font-bold text-white" { "Leaderboard" br; (title) }
             }
@@ -167,7 +327,7 @@ fn event_tiles(
     relevent_teams: &HashMap<i32, (String, Option<String>)>,
 ) -> maud::Markup {
     maud::html!(
-        div class="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-3" {
+        div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3" {
             @for event in events {
                 (event_tile(event, users, user_picks, relevent_teams))
             }
