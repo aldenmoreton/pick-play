@@ -1,0 +1,358 @@
+use std::collections::HashMap;
+
+use crate::{
+    controllers::auth::BackendUser,
+    model::{
+        book::{BookRole, BookSubscription},
+        chapter::{Chapter, ChapterUser},
+        event::{ChapterPick, ChapterPickHash, Event, EventContent},
+    },
+};
+
+pub fn m(
+    curr_user: BackendUser,
+    chapter: &Chapter,
+    book_subscription: &BookSubscription,
+    users: &[ChapterUser],
+    user_picks: &HashMap<ChapterPickHash, ChapterPick>,
+    events: &[Event],
+    relevent_teams: &HashMap<i32, (String, Option<String>)>,
+) -> maud::Markup {
+    crate::view::authenticated(
+        &curr_user.username,
+        None,
+        None,
+        Some(maud::html!(
+            link rel="stylesheet" id="tailwind" href="/public/styles/chapter-table.css";
+        )),
+        Some(maud::html! {
+            p {
+                a href="/" class="text-blue-400 hover:underline" {"Home"} " > "
+                a href="../.." class="text-blue-400 hover:underline" { (book_subscription.name) } " > "
+                a {(chapter.title)}
+            }
+        }),
+        Some(maud::html! {
+            div class="flex flex-col flex-grow overflow-scroll border border-black" {
+                @if book_subscription.role == BookRole::Admin {
+                    div class="flex justify-center" {
+                        fieldset class="w-1/2 border border-orange-600 max-w-60" {
+                            legend class="ml-3" { "Admin Section" }
+                            a href="admin/" {
+                                button class="px-2 py-2 mt-1 font-bold text-white bg-orange-600 rounded hover:bg-orange-700" {
+                                    "Go to Admin Page"
+                                }
+                            }
+                        }
+                    }
+
+                }
+                (leaderboard(&chapter.title, users, events, user_picks))
+                (event_tiles(events, users, user_picks, relevent_teams))
+                table class="m-1 overflow-auto picktable h-fit w-fit" {
+                    (table_header(events, relevent_teams))
+                    (table_rows(events, users, user_picks, relevent_teams))
+                }
+            }
+        }),
+        None,
+    )
+}
+
+fn user_points(
+    user: &ChapterUser,
+    events: &[Event],
+    user_picks: &HashMap<ChapterPickHash, ChapterPick>,
+) -> (i32, i32) {
+    let mut correct = 0;
+    let mut total = 0;
+
+    for event in events {
+        let user_pick = user_picks
+            .get(&ChapterPickHash {
+                event_id: event.id,
+                user_id: user.user_id,
+            })
+            .unwrap();
+        match (&event.contents.0, &user_pick) {
+            (EventContent::SpreadGroup(spreads), ChapterPick::SpreadGroup { choice, .. }) => {
+                correct += spreads
+                    .iter()
+                    .zip(choice)
+                    .filter(|(spread, choice)| matches!(spread.answer.clone(), Some(a) if a == **choice))
+                    .count() as i32;
+                total += spreads.len() as i32;
+            }
+            (EventContent::UserInput(input), ChapterPick::UserInput { choice, .. }) => {
+                correct += input.acceptable_answers.clone().unwrap().contains(choice) as i32;
+                total += 1;
+            }
+            _ => (),
+        }
+    }
+
+    (correct, total)
+}
+
+fn leaderboard(
+    title: &str,
+    users: &[ChapterUser],
+    events: &[Event],
+    user_picks: &HashMap<ChapterPickHash, ChapterPick>,
+) -> maud::Markup {
+    maud::html!(
+        div class="mx-4 bg-white border border-gray-300 shadow-lg rounded-xl" {
+            div class="p-6 pb-4 text-left bg-gray-500 border-b rounded-t-xl" {
+                h1 class="text-2xl font-bold text-white" { "Leaderboard" br; (title) }
+            }
+            div class="p-6" {
+                div class="overflow-hidden border border-gray-300 rounded-lg shadow-lg bg-gray-50" {
+                    div class="overflow-y-auto max-h-96" {
+                        table class="w-full" {
+                            thead class="sticky top-0 bg-white border-b shadow-sm" {
+                                tr {
+                                    th class="w-20 px-3 py-2 text-sm font-medium text-center text-gray-900" { "Rank" }
+                                    th class="px-3 py-2 text-sm font-medium text-left text-gray-900" { "Player" }
+                                    th class="px-3 py-2 text-sm font-medium text-center text-gray-900" { "Correct" }
+                                    th class="px-3 py-2 text-sm font-medium text-right text-gray-900" { "Points" }
+                                }
+                            }
+                            tbody class="bg-white divide-y divide-gray-200" {
+                                @for user in users {
+                                    tr class="hover:bg-gray-50" {
+                                        td class="px-3 py-2 font-medium text-center text-gray-900" { (user.rank) }
+                                        td class="px-3 py-2" {
+                                            div class="flex items-center gap-2" {
+                                                span class="font-medium text-gray-900" { (user.username) }
+                                            }
+                                        }
+                                        @let correct_questions = user_points(user, events, user_picks);
+                                        td class="px-3 py-2 text-center text-gray-900" { (correct_questions.0) " / " (correct_questions.1) }
+                                        td class="px-3 py-2 font-bold text-right text-gray-900" { (user.total_points) }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    )
+}
+
+fn event_tiles(
+    events: &[Event],
+    users: &[ChapterUser],
+    user_picks: &HashMap<ChapterPickHash, ChapterPick>,
+    relevent_teams: &HashMap<i32, (String, Option<String>)>,
+) -> maud::Markup {
+    maud::html!(
+        div {
+            @for event in events {
+                (event_tile(event, users, user_picks, relevent_teams))
+            }
+        }
+    )
+}
+
+fn event_tile(
+    event: &Event,
+    users: &[ChapterUser],
+    user_picks: &HashMap<ChapterPickHash, ChapterPick>,
+    relevent_teams: &HashMap<i32, (String, Option<String>)>,
+) -> maud::Markup {
+    match &event.contents.0 {
+        EventContent::SpreadGroup(spreads) => maud::html!(
+            @for (i, spread) in spreads.iter().enumerate() {
+                (spread_tile(i, spread, event, users, user_picks, relevent_teams))
+            }
+        ),
+        EventContent::UserInput(input) => user_input_tile(input, event, users, user_picks),
+    }
+}
+
+fn user_input_tile(
+    input: &crate::model::user_input::UserInput,
+    event: &Event,
+    users: &[ChapterUser],
+    user_picks: &HashMap<ChapterPickHash, ChapterPick>,
+) -> maud::Markup {
+    maud::html!(
+        div {
+            h1 { (input.title) }
+            @if let Some(desc) = &input.description {
+                p { (desc) }
+            }
+            p { "Possible Points: " (input.points) }
+            p { "Submissions:" }
+            table {
+                @for user in users {
+                    @let user_pick = user_picks.get(&ChapterPickHash{event_id: event.id, user_id: user.user_id}).unwrap();
+                    @match user_pick {
+                        ChapterPick::UserInput{choice, wager: _wager, points} => {
+                            tr {
+                                td { (user.username) }
+                                @let text_color = match points {
+                                    Some(0) => "text-red-500",
+                                    Some(_) => "text-green-500",
+                                    None => ""
+                                };
+
+                                td class={(text_color)} {
+                                    p {(choice)}
+                                }
+                            }
+                        },
+                        _ => {}
+                    }
+                }
+            }
+        }
+    )
+}
+
+fn spread_tile(
+    index: usize,
+    spread: &crate::model::spread::Spread,
+    event: &Event,
+    users: &[ChapterUser],
+    user_picks: &HashMap<ChapterPickHash, ChapterPick>,
+    relevent_teams: &HashMap<i32, (String, Option<String>)>,
+) -> maud::Markup {
+    maud::html!(
+        div {
+            h1 { (relevent_teams[&spread.away_id].0) (format!(" ({:+}) at", -1. * spread.home_spread)) }
+            h1 { (relevent_teams[&spread.home_id].0) (format!(" ({:+})", spread.home_spread)) }
+            table {
+                @for user in users {
+                    @let user_pick = user_picks.get(&ChapterPickHash{event_id: event.id, user_id: user.user_id}).unwrap();
+                        @match user_pick {
+                            ChapterPick::SpreadGroup{choice, wager, ..} => {
+                                tr {
+                                    td { (user.username) }
+                                    @let text_color = if spread.answer == Some(choice[index].clone()) {
+                                        "text-green-500"
+                                    } else if spread.answer != Some(choice[index].clone()) {
+                                        "text-red-500"
+                                    } else {
+                                        ""
+                                    };
+
+                                    @let team_id = match choice[index].as_str() {
+                                        "home" => spread.home_id,
+                                        "away" => spread.away_id,
+                                        _ => panic!()
+                                    };
+
+                                    td class={(text_color)} {
+                                        p { (relevent_teams[&team_id].0) br; (wager[index]) }
+                                    }
+                                }
+                            },
+                            _ => {}
+                        }
+                }
+            }
+        }
+    )
+}
+
+fn table_header(
+    events: &[Event],
+    relevent_teams: &HashMap<i32, (String, Option<String>)>,
+) -> maud::Markup {
+    maud::html!(
+        thead {
+            th {}
+            @for event in events {
+                @match &event.contents.0 {
+                    EventContent::SpreadGroup(group) => {
+                        @for spread in group {
+                            th {
+                                p { (relevent_teams[&spread.away_id].0) " " (format!("({:+})", -1. * spread.home_spread)) " at " (relevent_teams[&spread.home_id].0)}
+                            }
+                        }
+                    },
+                    EventContent::UserInput(input) => { th { p { (input.title) } } }
+                }
+            }
+        }
+    )
+}
+
+fn table_rows(
+    events: &[Event],
+    users: &[ChapterUser],
+    picks_by_user: &HashMap<ChapterPickHash, ChapterPick>,
+    relevent_teams: &HashMap<i32, (String, Option<String>)>,
+) -> maud::Markup {
+    maud::html!(
+        tbody {
+            // Each user
+            @for ChapterUser { user_id, username, total_points, rank: _rank } in users {
+                tr {
+                    td {
+                        p {(username)}
+                        p {(total_points) " point" (if *total_points != 1 {"s"} else {""})}
+                    }
+                    // Each event
+                    @for event in events {
+                        // Event type
+                        @match (&event.contents.0, picks_by_user.get(&ChapterPickHash{event_id: event.id, user_id: *user_id})) {
+                            (EventContent::SpreadGroup(spreads), Some(ChapterPick::SpreadGroup { choice, wager, .. })) => {
+                                @for (i, spread) in spreads.iter().enumerate() {
+                                    @let bg_color = match spread.answer.as_ref().map(|a| *a == choice[i]) {
+                                        _ if spread.answer.as_ref().map(|a| *a == "push").unwrap_or(false) => "bg-orange-300",
+                                        _ if spread.answer.as_ref().map(|a| *a == "unpicked").unwrap_or(false) => "",
+                                        Some(true) => "bg-green-300",
+                                        Some(false) => "bg-red-300",
+                                        None => "bg-grey-300"
+                                    };
+
+                                    @let team_id = match choice[i].as_str() {
+                                        "home" => spread.home_id,
+                                        "away" => spread.away_id,
+                                        _ => panic!()
+                                    };
+
+                                    td class={(bg_color)} {
+                                        p {(relevent_teams[&team_id].0)}
+                                        p {(wager[i])}
+                                    }
+                                }
+                            },
+                            (EventContent::SpreadGroup(spreads), None) => {
+                                @for _ in spreads {
+                                    td {
+                                        p class="text-red-500" {"No Pick"}
+                                    }
+                                }
+                            },
+                            (EventContent::UserInput(_), Some(ChapterPick::UserInput { choice, wager, points })) => {
+                                @let bg_color = match points.as_ref().map(|p| p == wager) {
+                                    Some(true) => "bg-green-300",
+                                    Some(false) => "bg-red-300",
+                                    None => ""
+                                };
+
+                                td class={(bg_color)} {
+                                    p {(choice)}
+                                    p {(wager)}
+                                }
+                            }
+                            (EventContent::UserInput(_), None) => {
+                                td {
+                                    p class="text-red-500" {"No Pick"}
+                                }
+                            }
+                            _ => {
+                                p { "Something Went Wrong!!!" }
+                            }
+                        }
+
+                    }
+                }
+            }
+        }
+    )
+}

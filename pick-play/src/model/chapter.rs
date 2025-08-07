@@ -42,6 +42,7 @@ pub struct ChapterUser {
     pub user_id: i32,
     pub username: String,
     pub total_points: i32,
+    pub rank: i32,
 }
 
 pub async fn get_chapter_users(
@@ -52,7 +53,11 @@ pub async fn get_chapter_users(
     sqlx::query_as!(
         ChapterUser,
         r#"
-        SELECT user_id, username, COALESCE(total_points, 0)::INT as "total_points!"
+        SELECT
+            user_id,
+            username,
+            COALESCE(total_points, 0)::INT as "total_points!",
+            RANK() OVER (ORDER BY total_points DESC, username)::INT as "rank!"
         FROM (
             SELECT
                 sub1.id AS user_id,
@@ -93,7 +98,7 @@ pub struct ChapterStats {
     pub is_visible: bool,
 }
 
-pub async fn get_chapters_with_stats(
+pub async fn chapters_with_stats(
     user_id: i32,
     book_id: i32,
     pool: &PgPool,
@@ -141,3 +146,17 @@ pub async fn get_chapters_with_stats(
     .fetch_all(pool)
     .await
 }
+
+// pub struct ChapterLeaderboardStats {
+//     pub user_id: i32,
+//     pub username: String,
+//     pub user_points: i32,
+//     pub user_rank: i32,
+// }
+
+// pub async fn chapter_with_stats(
+//     chapter_id: i32,
+//     pool: &PgPool,
+// ) -> Result<Vec<ChapterLeaderboardStats>, sqlx::Error> {
+//     todo!()
+// }

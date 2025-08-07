@@ -4,7 +4,7 @@ use crate::{
     auth::{AuthSession, BackendPgDB},
     model::{
         book::{BookRole, BookSubscription},
-        chapter::get_chapters_with_stats,
+        chapter::chapters_with_stats,
     },
     AppError, AppStateRef,
 };
@@ -16,7 +16,7 @@ pub async fn book_page(
     let user = auth_session.user.ok_or(AppError::BackendUser)?;
     let BackendPgDB(pool) = auth_session.backend;
 
-    let chapters = get_chapters_with_stats(user.id, book_subscription.id, &pool).await?;
+    let chapters = chapters_with_stats(user.id, book_subscription.id, &pool).await?;
     let guest_chapters = if let BookRole::Guest { chapter_ids } = book_subscription.role.clone() {
         Some(chapter_ids)
     } else {
