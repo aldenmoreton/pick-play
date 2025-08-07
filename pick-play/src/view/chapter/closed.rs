@@ -71,9 +71,16 @@ pub fn m(
                     color: #374151;
                 }
 
+                .leaderboard-table {
+                    max-height: calc(100vh - 120px);
+                }
+
                 @media (min-width: 768px) {
                     .mobile-toggle-container {
                         display: none !important;
+                    }
+                    .leaderboard-table {
+                        max-height: 24rem;
                     }
                 }
                 "#))
@@ -287,7 +294,7 @@ fn leaderboard(
             }
             div class="md:p-6" {
                 div class="overflow-hidden border border-gray-300 rounded-lg shadow-lg bg-gray-50" {
-                    div class="overflow-y-auto max-h-96" {
+                    div class="leaderboard-table overflow-y-auto" {
                         table class="w-full" {
                             thead class="sticky top-0 bg-white border-b shadow-sm" {
                                 tr {
