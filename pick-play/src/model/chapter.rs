@@ -111,7 +111,7 @@ pub async fn chapters_with_stats(
             c.title,
             c.is_open,
             c.is_visible,
-            (
+            COALESCE((
                 SELECT
                     COALESCE(SUM(CASE
                         WHEN event_type = 'spread_group' THEN (SELECT SUM(num) FROM generate_series(1, JSONB_ARRAY_LENGTH(contents->'spread_group')) AS num)
@@ -120,13 +120,13 @@ pub async fn chapters_with_stats(
                     END), 0)
                 FROM events
                 WHERE events.chapter_id = c.id
-            )::INT AS "total_points!",
-            (
+            )::INT, 0) AS "total_points!",
+            COALESCE((
                 SELECT COALESCE(SUM(points)::INT, 0)
                 FROM picks
                 WHERE user_id = $1 AND chapter_id = c.id
-            ) AS "user_points!",
-            (
+            ), 0) AS "user_points!",
+            COALESCE((
                 SELECT COALESCE(rank, 0)::INT
                 FROM (
                     SELECT user_id, RANK() OVER (ORDER BY SUM(points) DESC) as rank
@@ -135,7 +135,7 @@ pub async fn chapters_with_stats(
                     GROUP BY user_id
                 ) ranked_users
                 WHERE user_id = $1
-            ) AS "user_rank!"
+            ), 1) AS "user_rank!"
         FROM chapters AS c
         WHERE book_id = $2
         ORDER BY c.created_at DESC

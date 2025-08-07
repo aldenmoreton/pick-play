@@ -123,9 +123,9 @@ pub async fn user_books_stats(
             b.id AS "id!",
             b.name AS "name!",
             (SELECT COUNT(*) FROM subscriptions WHERE book_id = b.id AND not role ? 'guest')::INT AS "num_members!",
-            (SELECT c.id FROM chapters AS c WHERE c.book_id = b.id ORDER BY c.created_at DESC LIMIT 1) AS recent_chapter_id,
-            (SELECT c.title FROM chapters AS c WHERE c.book_id = b.id ORDER BY c.created_at DESC LIMIT 1) AS recent_chapter_title,
-            (SELECT c.is_open FROM chapters AS c WHERE c.book_id = b.id ORDER BY c.created_at DESC LIMIT 1) AS recent_chapter_is_open,
+            (SELECT c.id FROM chapters AS c WHERE c.book_id = b.id AND c.is_visible ORDER BY c.created_at DESC LIMIT 1) AS recent_chapter_id,
+            (SELECT c.title FROM chapters AS c WHERE c.book_id = b.id AND c.is_visible ORDER BY c.created_at DESC LIMIT 1) AS recent_chapter_title,
+            (SELECT c.is_open FROM chapters AS c WHERE c.book_id = b.id AND c.is_visible ORDER BY c.created_at DESC LIMIT 1) AS recent_chapter_is_open,
             ur.total_points::INT AS "user_points!",
             ur.user_rank::INT AS "rank!"
         FROM subscriptions AS s
