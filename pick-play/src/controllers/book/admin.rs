@@ -7,7 +7,10 @@ use axum_ctx::RespErr;
 use reqwest::StatusCode;
 
 use crate::{
-    auth::AuthSession, model::book::BookSubscription, view::authenticated, AppError, AppStateRef,
+    auth::AuthSession,
+    model::{book::BookSubscription, chapter::chapters_with_stats},
+    view::authenticated,
+    AppError, AppStateRef,
 };
 
 pub async fn handler(
@@ -33,6 +36,12 @@ pub async fn handler(
     .fetch_all(pool)
     .await?;
 
+    let chapters = chapters_with_stats(user.id, book_subscription.id, pool).await?;
+    let unpublished_chapters = chapters
+        .iter()
+        .filter(|chapter| !chapter.is_visible)
+        .peekable();
+
     Ok(authenticated(
         &user.username,
         Some(format!("{} - Admin", book_subscription.name).as_str()),
@@ -47,6 +56,18 @@ pub async fn handler(
         }),
         Some(maud::html! {
             div class="flex flex-col items-center justify-center" {
+                a href="../chapter/create/" {
+                    button class="px-2 py-2 mt-1 font-bold text-white bg-orange-600 rounded hover:bg-orange-700" {
+                        "Create New Chapter"
+                    }
+                }
+                div class="flex justify-center mb-6" {
+                    fieldset class="w-1/2 border border-orange-600" {
+                        legend class="ml-3" { "Chapter Management" }
+                        (crate::view::chapter::list::m(book_subscription.id, unpublished_chapters, Some("No Unpublished Chapters")))
+                    }
+                }
+
                 details {
                     summary {
                         span class="text-red-500" {"Danger Zone"}

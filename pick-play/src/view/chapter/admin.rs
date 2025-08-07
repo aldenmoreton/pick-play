@@ -94,16 +94,25 @@ pub fn m(
 
 pub fn chapter_open_button(is_open: bool) -> maud::Markup {
     maud::html! {
-        div hx-target="this" {
-            @if is_open {
-                p { "Chapter Status: Open" }
-                button hx-post="open?toggle=false" class="p-0.5 font-bold text-white bg-orange-600 rounded hover:bg-orange-700" {
-                    "Close"
+        div class="flex items-center justify-between p-3" id="chapter-open-toggle" {
+            span class="text-sm font-medium" { "Chapter Status:" }
+            label class="inline-flex items-center cursor-pointer ml-3" {
+                @if is_open {
+                    input type="checkbox" value="" class="sr-only peer" checked
+                        hx-post="open?toggle=false"
+                        hx-trigger="change"
+                        hx-target="#chapter-open-toggle"
+                        hx-swap="outerHTML";
+                } @else {
+                    input type="checkbox" value="" class="sr-only peer"
+                        hx-post="open?toggle=true"
+                        hx-trigger="change"
+                        hx-target="#chapter-open-toggle"
+                        hx-swap="outerHTML";
                 }
-            } @else {
-                p { "Chapter Status: Closed" }
-                button hx-post="open?toggle=true" class="p-0.5 font-bold text-white bg-orange-600 rounded hover:bg-orange-700" {
-                    "Open"
+                div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600" {}
+                span class="ml-3 text-sm font-medium" {
+                    @if is_open { "Open" } @else { "Closed" }
                 }
             }
         }
@@ -112,16 +121,25 @@ pub fn chapter_open_button(is_open: bool) -> maud::Markup {
 
 pub fn chapter_visible_button(is_visible: bool) -> maud::Markup {
     maud::html! {
-        div hx-target="this" {
-            @if is_visible {
-                p { "Chapter Visibility: Visible" }
-                button hx-post="visible?toggle=false" class="p-0.5 font-bold text-white bg-orange-600 rounded hover:bg-orange-700" {
-                    "Hide"
+        div class="flex items-center justify-between p-3 border-t border-gray-200" id="chapter-visible-toggle" {
+            span class="text-sm font-medium" { "Chapter Visibility:" }
+            label class="inline-flex items-center cursor-pointer ml-3" {
+                @if is_visible {
+                    input type="checkbox" value="" class="sr-only peer" checked
+                        hx-post="visible?toggle=false"
+                        hx-trigger="change"
+                        hx-target="#chapter-visible-toggle"
+                        hx-swap="outerHTML";
+                } @else {
+                    input type="checkbox" value="" class="sr-only peer"
+                        hx-post="visible?toggle=true"
+                        hx-trigger="change"
+                        hx-target="#chapter-visible-toggle"
+                        hx-swap="outerHTML";
                 }
-            } @else {
-                p { "Chapter Visibility: Hidden" }
-                button hx-post="visible?toggle=true" class="p-0.5 font-bold text-white bg-orange-600 rounded hover:bg-orange-700" {
-                    "Show"
+                div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600" {}
+                span class="ml-3 text-sm font-medium" {
+                    @if is_visible { "Visible" } @else { "Hidden" }
                 }
             }
         }

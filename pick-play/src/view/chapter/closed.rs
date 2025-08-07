@@ -172,21 +172,14 @@ pub fn m(
         Some(maud::html! {
             div class="flex flex-col flex-grow min-h-screen bg-gray-50" {
                 @if book_subscription.role == BookRole::Admin {
-                    div class="flex justify-center" {
-                        fieldset class="w-1/2 border border-orange-600 max-w-60" {
-                            legend class="ml-3" { "Admin Section" }
-                            a href="admin/" {
-                                button class="px-2 py-2 mt-1 font-bold text-white bg-orange-600 rounded hover:bg-orange-700" {
-                                    "Go to Admin Page"
-                                }
-                            }
+                    a href="admin/" {
+                        button class="fixed z-50 px-3 py-2 text-sm font-bold text-white transition-colors bg-orange-600 rounded-full shadow-lg bottom-4 right-4 hover:bg-orange-700" {
+                            "Admin"
                         }
                     }
-
                 }
-                // Mobile toggle buttons (only visible on small screens)
-                div class="mobile-toggle-container mx-4 mb-3" {
-                    div class="toggle-pill max-w-sm mx-auto" {
+                div class="mx-4 mb-3 mobile-toggle-container" {
+                    div class="max-w-sm mx-auto toggle-pill" {
                         div class="toggle-slider" {}
                         button
                             id="leaderboard-btn"
@@ -209,21 +202,18 @@ pub fn m(
                     }
                 }
 
-                // Leaderboard section
                 div id="leaderboard-section" class="block mx-4" {
                     (leaderboard(&chapter.title, users, events, user_picks))
                 }
 
-                // Events section
                 div id="events-section" class="block mx-4" {
-                    h2 class="mb-4 text-xl font-bold text-gray-900 hidden md:block" { "Event Results" }
+                    h2 class="hidden mb-4 text-xl font-bold text-gray-900 md:block" { "Event Results" }
                     (event_tiles(events, users, user_picks, relevent_teams))
                 }
 
-                // Table section
                 div id="table-section" class="block mx-4" {
                     div class="overflow-hidden md:bg-white md:border md:border-gray-200 md:rounded-lg md:shadow-md" {
-                        div class="p-4 bg-gray-100 border-b hidden md:block" {
+                        div class="hidden p-4 bg-gray-100 border-b md:block" {
                             h2 class="text-xl font-bold text-gray-900" { "Detailed Results Table" }
                         }
                         div class="overflow-x-auto" {
@@ -289,12 +279,12 @@ fn leaderboard(
 ) -> maud::Markup {
     maud::html!(
         div class="md:bg-white md:border md:border-gray-300 md:shadow-lg md:rounded-xl" {
-            div class="p-6 pb-4 text-left bg-gray-500 border-b rounded-t-xl hidden md:block" {
+            div class="hidden p-6 pb-4 text-left bg-gray-500 border-b rounded-t-xl md:block" {
                 h1 class="text-2xl font-bold text-white" { "Leaderboard" br; (title) }
             }
             div class="md:p-6" {
                 div class="overflow-hidden border border-gray-300 rounded-lg shadow-lg bg-gray-50" {
-                    div class="leaderboard-table overflow-y-auto" {
+                    div class="overflow-y-auto leaderboard-table" {
                         table class="w-full" {
                             thead class="sticky top-0 bg-white border-b shadow-sm" {
                                 tr {

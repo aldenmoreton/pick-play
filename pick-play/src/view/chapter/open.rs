@@ -37,14 +37,9 @@ pub fn m(
         }),
         Some(html! {
             @if is_admin {
-                div class="flex justify-center" {
-                    fieldset class="w-1/2 border border-orange-600 max-w-60" {
-                        legend class="ml-3" { "Admin Section" }
-                        a href="admin/" {
-                            button class="p-2 my-1 text-sm font-bold text-white bg-orange-600 rounded hover:bg-orange-700" {
-                                "Admin"
-                            }
-                        }
+                a href="admin/" {
+                    button class="fixed z-50 px-3 py-2 text-sm font-bold text-white transition-colors bg-orange-600 rounded-full shadow-lg bottom-4 right-4 hover:bg-orange-700" {
+                        "Admin"
                     }
                 }
             }

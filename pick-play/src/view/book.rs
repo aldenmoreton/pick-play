@@ -27,29 +27,16 @@ pub fn m(
         Some(maud::html! {
             h1 class="text-4xl font-extrabold" {(book_subscription.name)}
             @if book_subscription.role == BookRole::Admin {
-                div class="flex justify-center" {
-                    fieldset class="w-1/2 border border-orange-600" {
-                        legend class="ml-3" { "Admin Section" }
-                        a href="chapter/create/" {
-                            button class="px-2 py-2 mt-1 font-bold text-white bg-orange-600 rounded hover:bg-orange-700" {
-                                "Create New Chapter"
-                            }
-                        }
-                        br;
-                        a href="admin/" {
-                            button class="px-2 py-2 mt-1 font-bold text-white bg-orange-600 rounded hover:bg-orange-700" {
-                                "Admin"
-                            }
-                        }
-
-                        (chapter_list::m(book_subscription.id, chapters.iter().filter(|c| !c.is_visible).peekable(),Some("No Unpublished Chapters")))
+                a href="admin/" {
+                    button class="fixed z-50 px-3 py-2 text-sm font-bold text-white transition-colors bg-orange-600 rounded-full shadow-lg bottom-4 right-4 hover:bg-orange-700" {
+                        "Admin"
                     }
                 }
             }
 
             div class="flex items-center justify-center w-full" {
-                details class="w-auto relative" {
-                    summary class="p-3 my-1 align-middle bg-green-500 rounded-lg shadow-md select-none cursor-pointer" {
+                details class="relative w-auto" {
+                    summary class="p-3 my-1 align-middle bg-green-500 rounded-lg shadow-md cursor-pointer select-none" {
                         "Leaderboard"
                     }
                     div hx-get="leaderboard" hx-trigger="load" hx-swap="outerhtml" class="w-full mt-2 bg-white border border-gray-300 rounded-lg shadow-lg" {
@@ -60,7 +47,9 @@ pub fn m(
 
             @if let Some(guest_chapters) = guest_chapters {
                 (chapter_list::m(book_subscription.id, chapters.iter().filter(|c| c.is_visible && guest_chapters.contains(&c.id)).peekable(), None))
-            } @else {
+            } @else if book_subscription.role == BookRole::Admin {
+                (chapter_list::m(book_subscription.id, chapters.iter().peekable(), None))
+            }   @else {
                 (chapter_list::m(book_subscription.id, chapters.iter().filter(|c| c.is_visible).peekable(), None))
             }
         }),

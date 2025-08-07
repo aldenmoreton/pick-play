@@ -21,10 +21,12 @@ where
                 @for chapter in chapters {
                     li {
                         a href={"/book/"(book_id)"/chapter/"(chapter.id)"/"} class="object-fill" {
-                            div class="border border-gray-300 justify-center p-3 m-3 bg-white rounded-lg shadow-lg h-30 w-60" {
+                            div class="justify-center p-3 m-3 bg-white border border-gray-300 rounded-lg shadow-lg h-30 w-60" {
                                 p { (chapter.title) }
                                 p {
-                                    @if chapter.is_open {
+                                    @if !chapter.is_visible {
+                                        span class="text-orange-500" { "Not Visible" }
+                                    } @ else if chapter.is_open {
                                         span class="text-green-500" { "Open" }
                                     } @else {
                                         (chapter.user_rank)

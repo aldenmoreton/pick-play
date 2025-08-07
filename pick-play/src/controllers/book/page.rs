@@ -41,7 +41,7 @@ pub async fn leaderboard(
 
     Ok(maud::html! {
         div class="flex justify-center w-full" {
-            table class="text-sm w-auto max-w-md" {
+            table class="w-auto max-w-md text-sm" {
                 thead class="text-xs text-gray-700 uppercase bg-green-400" {
                     tr {
                         th scope="col" class="px-6 py-3" { "Rank" }
