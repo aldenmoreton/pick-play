@@ -288,17 +288,31 @@ fn spread_tile(
             }
         }
     }
+
+    let team_win = |team| {
+        spread
+            .answer
+            .as_ref()
+            .map(|ans| ans == team)
+            .unwrap_or_default()
+    };
+    let is_answered = spread
+        .answer
+        .as_ref()
+        .map(|ans| ans != "unpicked")
+        .unwrap_or_default();
+
     maud::html!(
         div class="bg-white border border-gray-300 rounded-lg shadow-md" {
             div class="p-4 pb-2" {
                 div class="flex items-center justify-between mb-3" {
                     div class="text-left" {
-                        h3 class="text-base font-semibold text-gray-900" {
-                            (relevent_teams[&spread.away_id].0)
+                        h3.text-red-500[is_answered] class="text-base font-semibold" {
+                            span.text-green-500[team_win("away")] { (relevent_teams[&spread.away_id].0) }
                             span class="text-sm font-normal text-gray-500" { (format!(" ({:+})", -1. * spread.home_spread)) }
                             span class="ml-2 text-sm font-normal text-gray-500" { "at" }
                             br;
-                            (relevent_teams[&spread.home_id].0)
+                            span.text-green-500[team_win("home")]{ (relevent_teams[&spread.home_id].0) }
                             span class="text-sm font-normal text-gray-500" { (format!(" ({:+})", spread.home_spread)) }
                         }
                     }
@@ -316,7 +330,6 @@ fn spread_tile(
                             @match user_pick {
                                 Some(ChapterPick::SpreadGroup{choice, wager, ..}) => {
                                     @let is_correct = spread.answer.as_ref().map(|a| *a == choice[index]).unwrap_or(false);
-                                    @let is_answered = spread.answer.is_some();
                                     @let bg_color = if !is_answered {
                                         "bg-gray-50"
                                     } else if is_correct {
