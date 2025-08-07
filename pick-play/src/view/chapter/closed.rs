@@ -209,14 +209,14 @@ pub fn m(
 
                 // Events section
                 div id="events-section" class="block mx-4" {
-                    h2 class="mb-4 text-xl font-bold text-gray-900" { "Event Results" }
+                    h2 class="mb-4 text-xl font-bold text-gray-900 hidden md:block" { "Event Results" }
                     (event_tiles(events, users, user_picks, relevent_teams))
                 }
 
                 // Table section
                 div id="table-section" class="block mx-4" {
-                    div class="overflow-hidden bg-white border border-gray-200 rounded-lg shadow-md" {
-                        div class="p-4 bg-gray-100 border-b" {
+                    div class="overflow-hidden md:bg-white md:border md:border-gray-200 md:rounded-lg md:shadow-md" {
+                        div class="p-4 bg-gray-100 border-b hidden md:block" {
                             h2 class="text-xl font-bold text-gray-900" { "Detailed Results Table" }
                         }
                         div class="overflow-x-auto" {
@@ -281,11 +281,11 @@ fn leaderboard(
     user_picks: &HashMap<ChapterPickHash, ChapterPick>,
 ) -> maud::Markup {
     maud::html!(
-        div class="bg-white border border-gray-300 shadow-lg rounded-xl" {
-            div class="p-6 pb-4 text-left bg-gray-500 border-b rounded-t-xl" {
+        div class="md:bg-white md:border md:border-gray-300 md:shadow-lg md:rounded-xl" {
+            div class="p-6 pb-4 text-left bg-gray-500 border-b rounded-t-xl hidden md:block" {
                 h1 class="text-2xl font-bold text-white" { "Leaderboard" br; (title) }
             }
-            div class="p-6" {
+            div class="md:p-6" {
                 div class="overflow-hidden border border-gray-300 rounded-lg shadow-lg bg-gray-50" {
                     div class="overflow-y-auto max-h-96" {
                         table class="w-full" {
