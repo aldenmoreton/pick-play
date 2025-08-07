@@ -200,15 +200,17 @@ fn user_input_tile(
     maud::html!(
         div class="bg-white border border-gray-300 rounded-lg shadow-md" {
             div class="p-4 pb-2" {
-                div class="flex items-center justify-between mb-2" {
-                    h3 class="text-lg font-semibold text-gray-900" { (input.title) }
-                    div class="text-right" {
-                        span class="text-xl font-bold text-blue-600" { (input.points) }
-                        p class="text-sm text-gray-500" { "points" }
+                div class="flex items-start justify-between mb-2" {
+                    div class="flex-1 mr-4 text-left" {
+                        h3 class="mb-1 text-lg font-semibold text-left text-gray-900" { (input.title) }
+                        @if let Some(desc) = &input.description {
+                            p class="text-sm text-left text-gray-600" { (desc) }
+                        }
                     }
-                }
-                @if let Some(desc) = &input.description {
-                    p class="mb-3 text-sm text-left text-gray-600" { (desc) }
+                    div class="flex-shrink-0 text-right" {
+                        span class="text-xl font-bold text-blue-600" { (input.points) }
+                        p class="text-sm text-gray-500" { "Point" @if input.points > 1 {"s"} }
+                    }
                 }
             }
             div class="p-4 pt-0" {
@@ -289,20 +291,22 @@ fn spread_tile(
     maud::html!(
         div class="bg-white border border-gray-300 rounded-lg shadow-md" {
             div class="p-4 pb-2" {
-                div class="mb-3 text-center" {
-                    h3 class="mb-1 text-lg font-semibold text-gray-900" {
-                        (relevent_teams[&spread.away_id].0)
-                        span class="text-sm font-normal text-gray-500" { (format!(" ({:+})", -1. * spread.home_spread)) }
+                div class="flex items-center justify-between mb-3" {
+                    div class="text-left" {
+                        h3 class="text-base font-semibold text-gray-900" {
+                            (relevent_teams[&spread.away_id].0)
+                            span class="text-sm font-normal text-gray-500" { (format!(" ({:+})", -1. * spread.home_spread)) }
+                            span class="ml-2 text-sm font-normal text-gray-500" { "at" }
+                            br;
+                            (relevent_teams[&spread.home_id].0)
+                            span class="text-sm font-normal text-gray-500" { (format!(" ({:+})", spread.home_spread)) }
+                        }
                     }
-                    p class="text-sm text-gray-500" { "at" }
-                    h3 class="text-lg font-semibold text-gray-900" {
-                        (relevent_teams[&spread.home_id].0)
-                        span class="text-sm font-normal text-gray-500" { (format!(" ({:+})", spread.home_spread)) }
+                    div class="text-right" {
+                        p class="text-sm text-gray-600" { "Wagered: " (points_wagered) }
+                        p class="text-sm text-gray-600" { "Awarded: " (points_awarded) }
                     }
                 }
-                p { "Points" }
-                p { "Wagered " (points_wagered) }
-                p { "Awarded " (points_awarded) }
             }
             div class="p-4 pt-0" {
                 div class="space-y-2" {
@@ -446,7 +450,7 @@ fn table_rows(
                             },
                             (EventContent::SpreadGroup(spreads), None) => {
                                 @for _ in spreads {
-                                    td class="px-3 py-3 text-center border-b border-gray-200 bg-red-50" {
+                                    td class="px-3 py-3 text-center border-b border-gray-50 bg-gray-50" {
                                         p class="text-xs font-medium text-red-600" {"No Pick"}
                                     }
                                 }
@@ -458,7 +462,7 @@ fn table_rows(
                                     None => "bg-gray-100"
                                 };
 
-                                td class={(format!("px-3 py-3 text-center border-b border-gray-200 {}", bg_color))} {
+                                td class={(format!("px-3 py-3 text-center border-b {}", bg_color))} {
                                     div class="space-y-1" {
                                         p class="text-xs font-medium truncate" title={(choice)} {(choice)}
                                         p class="text-xs opacity-75" {"Wager: " (wager)}
@@ -466,7 +470,7 @@ fn table_rows(
                                 }
                             }
                             (EventContent::UserInput(_), None) => {
-                                td class="px-3 py-3 text-center border-b border-gray-200 bg-red-50" {
+                                td class="px-3 py-3 text-center border-b bg-gray-50 border-gray-50" {
                                     p class="text-xs font-medium text-red-600" {"No Pick"}
                                 }
                             }
