@@ -41,11 +41,11 @@ pub fn m(
                 }
 
                 div class="flex items-center justify-center" {
-                    details class="flex items-center w-max" hx-target="this" {
+                    details class="w-max" hx-target="this" {
                         summary class="p-3 my-1 align-middle bg-green-500 rounded-lg shadow-md select-none" {
                             "Unsubmitted Users"
                         }
-                        div hx-get="unsubmitted-users" hx-trigger="load" hx-swap="outerHTML" class="flex items-center" {
+                        div hx-get="unsubmitted-users" hx-trigger="load" hx-swap="outerHTML" class="mt-2" {
                             "Loading..."
                         }
                     }

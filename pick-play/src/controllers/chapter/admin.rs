@@ -414,12 +414,12 @@ pub async fn unsubmitted_users(
                 "No Picks Submitted"
             }
         } @else {
-            details class="flex items-center w-max" hx-swap="this" {
+            details class="w-max" hx-swap="this" {
                 summary class="p-3 my-1 align-middle bg-green-500 rounded-lg shadow-md select-none" {
                     (unpicked_users.len()) " Unpicked User" @if unpicked_users.len() > 1 { "s" }
                 }
-                div class="grid items-center grid-cols-2 gap-2" {
-                    div class="col-span-1" {
+                div class="mt-2 space-y-2" {
+                    div {
                         ul class="w-full text-center bg-white rounded-lg" {
                             li class="bg-red-500 rounded-t-lg" { "Unpicked Users" }
                             @for user in unpicked_users {
@@ -427,7 +427,7 @@ pub async fn unsubmitted_users(
                             }
                         }
                     }
-                    div class="col-span-1" {
+                    div {
                         ul class="w-full text-center bg-white rounded-lg" {
                             li class="bg-green-500 rounded-t-lg" { "Picked Users" }
                             @for user in picked_users {
