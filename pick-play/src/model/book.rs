@@ -256,3 +256,146 @@ pub async fn leaderboard(
         book_id
     ).fetch_all(pool).await
 }
+
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct BookMember {
+    pub id: i32,
+    pub username: String,
+    pub role: serde_json::Value,
+}
+
+pub async fn get_book_members(
+    book_id: i32,
+    owner_user_id: i32,
+    pool: &PgPool,
+) -> Result<Vec<BookMember>, sqlx::Error> {
+    sqlx::query_as!(
+        BookMember,
+        r#"
+        SELECT u.id, u.username, s.role
+        FROM users AS u
+        JOIN subscriptions AS s ON u.id=s.user_id
+        JOIN books AS b on s.book_id=b.id
+        WHERE b.id = $1 AND u.id != $2
+        ORDER BY u.id
+        "#,
+        book_id,
+        owner_user_id
+    )
+    .fetch_all(pool)
+    .await
+}
+
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct UserSearchResult {
+    pub id: i32,
+    pub username: String,
+}
+
+pub async fn search_users_not_in_book(
+    search_username: &str,
+    book_id: i32,
+    pool: &PgPool,
+) -> Result<Vec<UserSearchResult>, sqlx::Error> {
+    sqlx::query_as!(
+        UserSearchResult,
+        r#"
+        SELECT u.id, u.username
+        FROM users AS u
+        LEFT JOIN (
+            SELECT *
+            FROM subscriptions
+            WHERE subscriptions.book_id = $2
+        ) AS s ON u.id = s.user_id
+        WHERE LOWER(u.username) LIKE '%' || LOWER($1) || '%' AND s.user_id IS NULL
+        "#,
+        search_username,
+        book_id
+    )
+    .fetch_all(pool)
+    .await
+}
+
+pub async fn add_user_to_book(
+    user_id: i32,
+    book_id: i32,
+    pool: &PgPool,
+) -> Result<Option<i32>, sqlx::Error> {
+    sqlx::query!(
+        r#"
+        INSERT INTO subscriptions (user_id, book_id, role)
+        VALUES ($1, $2, to_jsonb('participant'::TEXT))
+        ON CONFLICT (user_id, book_id)
+        DO NOTHING
+        RETURNING user_id
+        "#,
+        user_id,
+        book_id
+    )
+    .fetch_optional(pool)
+    .await
+    .map(|row| row.map(|r| r.user_id))
+}
+
+pub async fn remove_user_from_book(
+    user_id: i32,
+    book_id: i32,
+    pool: &PgPool,
+) -> Result<(), sqlx::Error> {
+    sqlx::query!(
+        r#"
+        DELETE FROM subscriptions
+        WHERE user_id = $1 AND book_id = $2
+        "#,
+        user_id,
+        book_id
+    )
+    .execute(pool)
+    .await
+    .map(|_| ())
+}
+
+pub async fn delete_book_cascade(
+    book_id: i32,
+    pool: &PgPool,
+) -> Result<(), sqlx::Error> {
+    let mut transaction = pool.begin().await?;
+
+    sqlx::query!(
+        r#"DELETE FROM picks WHERE book_id = $1"#,
+        book_id
+    )
+    .execute(&mut *transaction)
+    .await?;
+
+    sqlx::query!(
+        r#"DELETE FROM events WHERE book_id = $1"#,
+        book_id
+    )
+    .execute(&mut *transaction)
+    .await?;
+
+    sqlx::query!(
+        r#"DELETE FROM chapters WHERE book_id = $1"#,
+        book_id
+    )
+    .execute(&mut *transaction)
+    .await?;
+
+    sqlx::query!(
+        r#"DELETE FROM subscriptions WHERE book_id = $1"#,
+        book_id
+    )
+    .execute(&mut *transaction)
+    .await?;
+
+    sqlx::query!(
+        r#"DELETE FROM books WHERE id = $1"#,
+        book_id
+    )
+    .execute(&mut *transaction)
+    .await?;
+
+    transaction.commit().await?;
+    Ok(())
+}

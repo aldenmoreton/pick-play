@@ -8,8 +8,10 @@ use reqwest::StatusCode;
 
 use crate::{
     auth::AuthSession,
-    model::{book::BookSubscription, chapter::chapters_with_stats},
-    view::authenticated,
+    model::{
+        book::{BookSubscription, get_book_members, search_users_not_in_book, add_user_to_book, remove_user_from_book, delete_book_cascade},
+        chapter::chapters_with_stats,
+    },
     AppError, AppStateRef,
 };
 
@@ -18,23 +20,11 @@ pub async fn handler(
     Extension(book_subscription): Extension<BookSubscription>,
 ) -> Result<maud::Markup, AppError<'static>> {
     let user = auth_session.user.ok_or(AppError::BackendUser)?;
-
     let pool = &auth_session.backend.0;
 
-    let users = sqlx::query!(
-        "
-        SELECT u.id, u.username, s.role
-        FROM users AS u
-        JOIN subscriptions AS s ON u.id=s.user_id
-        JOIN books AS b on s.book_id=b.id
-        WHERE b.id = $1 AND u.id != $2
-        ORDER BY u.id
-        ",
-        book_subscription.id,
-        book_subscription.user_id
-    )
-    .fetch_all(pool)
-    .await?;
+    let members = get_book_members(book_subscription.id, book_subscription.user_id, pool)
+        .await
+        .map_err(AppError::from)?;
 
     let chapters = chapters_with_stats(user.id, book_subscription.id, pool).await?;
     let unpublished_chapters = chapters
@@ -42,91 +32,11 @@ pub async fn handler(
         .filter(|chapter| !chapter.is_visible)
         .peekable();
 
-    Ok(authenticated(
-        &user.username,
-        Some(format!("{} - Admin", book_subscription.name).as_str()),
-        None,
-        None,
-        Some(maud::html! {
-            p {
-                a href="/" class="text-blue-400 hover:underline" {"Home"} " > "
-                a href=".." class="text-blue-400 hover:underline" { (book_subscription.name) } " > "
-                a {"Admin"}
-            }
-        }),
-        Some(maud::html! {
-            div class="flex flex-col items-center justify-center" {
-                a href="../chapter/create/" {
-                    button class="px-2 py-2 mt-1 font-bold text-white bg-orange-600 rounded hover:bg-orange-700" {
-                        "Create New Chapter"
-                    }
-                }
-                div class="flex justify-center mb-6" {
-                    fieldset class="w-1/2 border border-orange-600" {
-                        legend class="ml-3" { "Chapter Management" }
-                        (crate::view::chapter::list::m(book_subscription.id, unpublished_chapters, Some("No Unpublished Chapters")))
-                    }
-                }
-
-                details {
-                    summary {
-                        span class="text-red-500" {"Danger Zone"}
-                    }
-                    button
-                        hx-delete="."
-                        hx-confirm="Are you sure you wish to delete this book, all chapters, and all picks within FOREVER?"
-                        class="p-0.5 font-bold text-white bg-red-600 rounded hover:bg-red-700" {
-                        "Delete Book"
-                    }
-                }
-
-                div class="relative mt-5 overflow-x-auto rounded-lg" {
-                table class="w-full text-sm text-left text-gray-500 rtl:text-right" {
-                    thead class="text-xs text-gray-700 uppercase bg-gray-100" {
-                        tr {
-                            th scope="col" class="px-6 py-3 rounded-s-lg" { "username" }
-                            th scope="col" class="px-6 py-3" { "status" }
-                            th scope="col" class="px-6 py-3 rounded-e-lg" { "action" }
-                        }
-                    }
-
-                    tbody {
-                        tr class="bg-white" {
-                            td scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap" { (user.username) }
-                            td class="px-6 py-4" { "admin" }
-                            td class="px-6 py-4" { button { "Heavy is The Head" br; "That Wears The Crown" } }
-                        }
-
-                        @for user in users {
-                            tr class="bg-white" hx-target="this" {
-                                td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap" { (user.username) }
-                                td class="px-6 py-4" { (user.role) }
-                                td class="px-6 py-4" { button hx-post="remove-user" hx-vals={r#"{"user_id":""#(user.id)r#""}"#} class="px-2 py-2 mt-1 font-bold text-white bg-orange-600 rounded hover:bg-orange-700" { "Remove" } }
-                            }
-                        }
-                    }
-                    tfoot {
-                        tr class="font-semibold text-gray-900 bg-green-400" {
-                            th scope="row" class="px-6 py-3 text-base" { "Add Member" }
-                            th colspan="2" {
-                                input
-                                    name="username"
-                                    hx-get="user-search"
-                                    hx-trigger="input changed delay:200ms, search"
-                                    hx-target="next ul"
-                                    type="search"
-                                    autocomplete="off"
-                                    placeholder="username"
-                                    class="border border-green-300";
-                               ul {}
-                            }
-                        }
-                    }
-                }
-                }
-            }
-        }),
-        None,
+    Ok(crate::view::book::admin::m(
+        &user,
+        &book_subscription,
+        unpublished_chapters,
+        &members,
     ))
 }
 
@@ -143,29 +53,15 @@ pub async fn add_user(
 ) -> Result<maud::Markup, ErrorResponse> {
     let pool = &state.pool;
 
-    sqlx::query!(
-        "
-            INSERT INTO subscriptions (user_id, book_id, role)
-            VALUES ($1, $2, to_jsonb('participant'::TEXT))
-            ON CONFLICT (user_id, book_id)
-            DO NOTHING
-            RETURNING user_id
-        ",
-        user_params.user_id,
-        book_subscription.id
-    )
-    .fetch_optional(pool)
-    .await
-    .map_err(AppError::from)?
-    .ok_or(RespErr::new(StatusCode::BAD_REQUEST).user_msg("Could not find user to add"))?;
+    add_user_to_book(user_params.user_id, book_subscription.id, pool)
+        .await
+        .map_err(AppError::from)?
+        .ok_or(RespErr::new(StatusCode::BAD_REQUEST).user_msg("Could not find user to add"))?;
 
-    Ok(maud::html! {
-        tr class="bg-white" hx-target="this" {
-            td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap" { (user_params.username) }
-            td class="px-6 py-4" { "participant" }
-            td class="px-6 py-4" { button hx-post="remove-user" hx-vals={r#"{"user_id":""#(user_params.user_id)r#""}"#} class="px-2 py-2 mt-1 font-bold text-white bg-orange-600 rounded hover:bg-orange-700" { "Remove" } }
-        }
-    })
+    Ok(crate::view::book::admin::new_member_row(
+        user_params.user_id,
+        &user_params.username,
+    ))
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -186,38 +82,13 @@ pub async fn search_user(
         return Ok(maud::html!());
     }
 
-    let matching_users = sqlx::query!(
-        "
-            SELECT u.id, u.username
-            FROM users AS u
-            LEFT JOIN (
-                SELECT *
-                FROM subscriptions
-                WHERE subscriptions.book_id = $2
-            ) AS s ON u.id = s.user_id
-            WHERE LOWER(u.username) LIKE '%' || LOWER($1) || '%' AND s.user_id IS NULL
-            ",
-        search_username,
-        book_subscription.id
-    )
-    .fetch_all(pool)
-    .await?;
+    let matching_users = search_users_not_in_book(&search_username, book_subscription.id, pool)
+        .await
+        .map_err(AppError::from)?;
 
-    Ok(maud::html!(
-        @for user in matching_users {
-            li {
-                button
-                    name="username"
-                    value=(user.username)
-                    hx-post={"/book/"(book_subscription.id)"/admin/add-user"}
-                    hx-vals={r#"{"user_id":""#(user.id)r#""}"#}
-                    hx-target="previous tbody"
-                    hx-on-click=r#"document.querySelector('input[type="search"]').value=""; document.querySelector('ul').innerHTML="";"#
-                    hx-swap="beforeend" {
-                        (user.username)
-                    }
-            }
-        }
+    Ok(crate::view::book::admin::user_search_results(
+        &matching_users,
+        book_subscription.id,
     ))
 }
 
@@ -233,16 +104,9 @@ pub async fn remove_user(
 ) -> Result<(), AppError<'static>> {
     let pool = &state.pool;
 
-    sqlx::query!(
-        "
-        DELETE FROM subscriptions
-        WHERE user_id = $1 AND book_id = $2
-        ",
-        form.user_id,
-        book.id
-    )
-    .execute(pool)
-    .await?;
+    remove_user_from_book(form.user_id, book.id, pool)
+        .await
+        .map_err(AppError::from)?;
 
     Ok(())
 }
@@ -251,59 +115,11 @@ pub async fn delete(
     State(state): State<AppStateRef>,
     Extension(book_subscription): Extension<BookSubscription>,
 ) -> Result<impl IntoResponse, AppError<'static>> {
-    let mut transaction = state.pool.begin().await?;
+    let pool = &state.pool;
 
-    sqlx::query!(
-        "
-        DELETE FROM picks
-        WHERE book_id = $1
-        ",
-        book_subscription.id
-    )
-    .execute(&mut *transaction)
-    .await?;
-
-    sqlx::query!(
-        "
-        DELETE FROM events
-        WHERE book_id = $1
-        ",
-        book_subscription.id
-    )
-    .execute(&mut *transaction)
-    .await?;
-
-    sqlx::query!(
-        "
-        DELETE FROM chapters
-        WHERE book_id = $1
-        ",
-        book_subscription.id
-    )
-    .execute(&mut *transaction)
-    .await?;
-
-    sqlx::query!(
-        "
-        DELETE FROM subscriptions
-        WHERE book_id = $1
-        ",
-        book_subscription.id
-    )
-    .execute(&mut *transaction)
-    .await?;
-
-    sqlx::query!(
-        "
-        DELETE FROM books
-        WHERE id = $1
-        ",
-        book_subscription.id
-    )
-    .execute(&mut *transaction)
-    .await?;
-
-    transaction.commit().await?;
+    delete_book_cascade(book_subscription.id, pool)
+        .await
+        .map_err(AppError::from)?;
 
     Ok([("HX-Redirect", "/")].into_response())
 }

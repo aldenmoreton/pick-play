@@ -23,7 +23,7 @@ pub async fn book_page(
         None
     };
 
-    Ok(crate::view::book::m(
+    Ok(crate::view::book::page::m(
         user,
         book_subscription,
         chapters,

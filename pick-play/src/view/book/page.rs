@@ -13,7 +13,7 @@ pub fn m(
     chapters: Vec<ChapterStats>,
     guest_chapters: Option<Vec<i32>>,
 ) -> maud::Markup {
-    super::authenticated(
+    super::super::authenticated(
         &user.username,
         Some(&book_subscription.name),
         None,
