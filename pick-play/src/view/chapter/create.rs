@@ -19,7 +19,7 @@ pub fn m(username: &str, book_name: &str) -> maud::Markup {
         }),
         Some(maud::html! {
             input type="text" name="chapter-name" class="border border-green-300" placeholder="Chapter Name" form="submit-events" required;
-            div id="event-spaces" {}
+            div id="event-spaces" class="flex flex-col items-center" {}
 
             button hx-get="add?type=spread-group" hx-target="#event-spaces" hx-swap="beforeend" hx-on--after-on-load="this.remove()" class="px-2 py-2 mx-1 mt-1 font-bold text-white bg-orange-600 rounded hover:bg-orange-700" {
                 "Add Spread Group"

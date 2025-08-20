@@ -32,18 +32,18 @@ pub fn markup(ty: AddEventType) -> maud::Markup {
 fn spread_group_spread() -> maud::Markup {
     maud::html! {
         fieldset name="spreads" me-insert="array" class="border border-black rounded-md" {
-            p { "Spread Team 1 (Home)" }
-            div title="team-1" hx-target="this" {
-                input type="search" name="name" placeholder="Team 1" autocomplete="off" class="border border-green-300" hx-get="/team-search" hx-trigger="input changed delay:500ms, search" hx-vals=r#"{"location":"home-id"}"# hx-target="next ul" ;
-                ul {}
-                input form="submit-events" type="text" name="team-1-validate" class="border border-green-300" style="opacity: 0; width: 0;" oninvalid="this.setCustomValidity('Missing Spread Team 1')" required;
-            }
-
-            p { "Spread Team 2 (Away)" }
+            p { "Away Team" }
             div title="team-2" hx-target="this" {
-                input type="search" name="name" placeholder="Team 2" autocomplete="off" class="border border-green-300" hx-get="/team-search" hx-trigger="input changed delay:500ms, search" hx-vals=r#"{"location":"away-id"}"# hx-target="next ul" ;
+                input type="search" name="name" placeholder="Away Team" autocomplete="off" class="border border-green-300" hx-get="/team-search" hx-trigger="input changed delay:500ms, search" hx-vals=r#"{"location":"away-id"}"# hx-target="next ul" ;
                 ul {}
                 input form="submit-events" type="text" name="team-2-validate" class="border border-green-300" style="opacity: 0; width: 0;" oninvalid="this.setCustomValidity('Missing Spread Team 2')" required;
+            }
+
+            p { "Home Team" }
+            div title="team-1" hx-target="this" {
+                input type="search" name="name" placeholder="Home Team" autocomplete="off" class="border border-green-300" hx-get="/team-search" hx-trigger="input changed delay:500ms, search" hx-vals=r#"{"location":"home-id"}"# hx-target="next ul" ;
+                ul {}
+                input form="submit-events" type="text" name="team-1-validate" class="border border-green-300" style="opacity: 0; width: 0;" oninvalid="this.setCustomValidity('Missing Spread Team 1')" required;
             }
 
             div title="spread-amount" {
