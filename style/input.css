@@ -2,6 +2,72 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+
+    /* Global input styles to ensure text readability */
+    input[type="text"],
+    input[type="password"],
+    input[type="email"],
+    input[type="number"],
+    input[type="search"],
+    input[type="tel"],
+    input[type="url"],
+    input[type="date"],
+    input[type="datetime-local"],
+    input[type="month"],
+    input[type="time"],
+    input[type="week"],
+    textarea,
+    select {
+        @apply px-3 py-2;
+    }
+
+    /* Fix for inputs with just border class */
+    input.border:not([class*="px-"]):not([class*="p-"]) {
+        @apply px-3 py-2;
+    }
+
+    /* Override focus states to prevent text overlap */
+    input:focus,
+    textarea:focus,
+    select:focus {
+        @apply outline-none ring-0 border-blue-500;
+    }
+
+    /* Override shadow-outline focus state */
+    .focus\:shadow-outline:focus {
+        @apply shadow-none ring-2 ring-blue-500 ring-opacity-50;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    /* Ensure border doesn't get thicker on focus */
+    .focus\:border-blue-500:focus {
+        @apply border-blue-500;
+        border-width: 1px;
+    }
+
+    /* Fix for inputs that have both ring and border focus states */
+    .focus\:ring-blue-500.focus\:border-blue-500:focus {
+        @apply ring-0 border-blue-500;
+        border-width: 1px;
+    }
+}
+
+@layer components {
+
+    /* Safe input class for consistent styling without focus issues */
+    .safe-input {
+        @apply px-3 py-2 text-gray-700 border border-gray-300 rounded shadow-sm;
+        @apply focus:outline-none focus:border-blue-500 focus:ring-0;
+        border-width: 1px !important;
+    }
+
+    .safe-input:focus {
+        border-width: 1px !important;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+}
+
 @layer utilities {
     .picktable table {
         border-spacing: 0;
