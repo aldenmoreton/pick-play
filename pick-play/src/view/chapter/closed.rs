@@ -75,12 +75,26 @@ pub fn m(
                     max-height: calc(100vh - 120px);
                 }
 
+                /* Mobile section visibility */
+                @media (max-width: 767px) {
+                    .section-content {
+                        display: none;
+                    }
+                    .section-content.active {
+                        display: block;
+                    }
+                }
+
                 @media (min-width: 768px) {
                     .mobile-toggle-container {
                         display: none !important;
                     }
                     .leaderboard-table {
                         max-height: 24rem;
+                    }
+                    /* Show all sections on desktop */
+                    .section-content {
+                        display: block !important;
                     }
                 }
                 "#))
@@ -103,20 +117,18 @@ pub fn m(
                         return;
                     }
 
-                    // Hide all sections
+                    // Update section visibility using classes
                     const sections = ['leaderboard', 'events', 'table'];
                     sections.forEach(s => {
                         const el = document.getElementById(s + '-section');
                         if (el) {
-                            el.style.display = 'none';
+                            if (s === section) {
+                                el.classList.add('active');
+                            } else {
+                                el.classList.remove('active');
+                            }
                         }
                     });
-
-                    // Show selected section
-                    const targetSection = document.getElementById(section + '-section');
-                    if (targetSection) {
-                        targetSection.style.display = 'block';
-                    }
 
                     // Update button states
                     document.querySelectorAll('.toggle-button').forEach(btn => {
@@ -141,38 +153,22 @@ pub fn m(
                 };
 
                 function handleResize() {
-                    const sections = ['leaderboard', 'events', 'table'];
                     if (isMobileScreen()) {
-                        // Only initialize on first load, don't reset on subsequent resizes
+                        // Always call showSection to ensure proper button and slider state
+                        showSection(currentActiveSection);
                         if (!isInitialized) {
-                            showSection(currentActiveSection);
                             isInitialized = true;
-                        } else {
-                            // Just ensure the current section is visible without calling showSection
-                            sections.forEach(s => {
-                                const el = document.getElementById(s + '-section');
-                                if (el) {
-                                    el.style.display = s === currentActiveSection ? 'block' : 'none';
-                                }
-                            });
                         }
                     } else {
-                        // On desktop, show all sections
-                        sections.forEach(s => {
-                            const el = document.getElementById(s + '-section');
-                            if (el) {
-                                el.style.display = 'block';
-                            }
-                        });
+                        // On desktop, the CSS handles showing all sections
                         isInitialized = true;
                     }
                 }
 
                 // Initialize on page load
                 document.addEventListener('DOMContentLoaded', function() {
-                    setTimeout(function() {
-                        handleResize();
-                    }, 100);
+                    // Run immediately to prevent flicker
+                    handleResize();
                 });
 
                 // Handle window resize
@@ -220,16 +216,16 @@ pub fn m(
                     }
                 }
 
-                div id="leaderboard-section" class="block mx-4" {
+                div id="leaderboard-section" class="section-content active mx-4" {
                     (leaderboard(&chapter.title, users, events, user_picks))
                 }
 
-                div id="events-section" class="block mx-4" {
+                div id="events-section" class="section-content mx-4" {
                     h2 class="hidden mb-4 text-xl font-bold text-gray-900 md:block" { "Event Results" }
                     (event_tiles(events, users, user_picks, relevent_teams))
                 }
 
-                div id="table-section" class="block mx-4" {
+                div id="table-section" class="section-content mx-4" {
                     div class="overflow-hidden md:bg-white md:border md:border-gray-200 md:rounded-lg md:shadow-md" {
                         div class="hidden p-4 bg-gray-100 border-b md:block" {
                             h2 class="text-xl font-bold text-gray-900" { "Detailed Results Table" }
