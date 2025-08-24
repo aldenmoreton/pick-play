@@ -57,7 +57,7 @@ pub async fn get_chapter_users(
             user_id,
             username,
             COALESCE(total_points, 0)::INT as "total_points!",
-            RANK() OVER (ORDER BY total_points DESC, username)::INT as "rank!"
+            RANK() OVER (ORDER BY total_points DESC)::INT as "rank!"
         FROM (
             SELECT
                 sub1.id AS user_id,

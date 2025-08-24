@@ -216,16 +216,16 @@ pub fn m(
                     }
                 }
 
-                div id="leaderboard-section" class="section-content active mx-4" {
+                div id="leaderboard-section" class="mx-4 section-content active" {
                     (leaderboard(&chapter.title, users, events, user_picks))
                 }
 
-                div id="events-section" class="section-content mx-4" {
+                div id="events-section" class="mx-4 section-content" {
                     h2 class="hidden mb-4 text-xl font-bold text-gray-900 md:block" { "Event Results" }
                     (event_tiles(events, users, user_picks, relevent_teams))
                 }
 
-                div id="table-section" class="section-content mx-4" {
+                div id="table-section" class="mx-4 section-content" {
                     div class="overflow-hidden md:bg-white md:border md:border-gray-200 md:rounded-lg md:shadow-md" {
                         div class="hidden p-4 bg-gray-100 border-b md:block" {
                             h2 class="text-xl font-bold text-gray-900" { "Detailed Results Table" }
@@ -309,9 +309,13 @@ fn leaderboard(
                                 }
                             }
                             tbody class="bg-white divide-y divide-gray-200" {
-                                @for user in users {
+                                @for (i, user) in users.into_iter().enumerate() {
                                     tr class="hover:bg-gray-50" {
-                                        td class="px-3 py-2 font-medium text-center text-gray-900" { (user.rank) }
+                                        @if user.rank == i as i32 + 1 {
+                                            td class="px-3 py-2 font-medium text-center text-gray-900" { (user.rank) }
+                                        } @ else {
+                                            td {}
+                                        }
                                         td class="px-3 py-2" {
                                             div class="flex items-center gap-2" {
                                                 span class="font-medium text-gray-900" { (user.username) }
@@ -596,7 +600,7 @@ fn table_rows(
             // Each user
             @for ChapterUser { user_id, username, total_points, rank: _rank } in users {
                 tr class="hover:bg-gray-50" {
-                    td class="px-4 py-3 border-b border-gray-200 bg-gray-200 opacity-100" {
+                    td class="px-4 py-3 bg-gray-200 border-b border-gray-200 opacity-100" {
                         p class="font-medium text-gray-900" {(username)}
                         p class="text-sm text-gray-500" {(total_points) " point" (if *total_points != 1 {"s"} else {""})}
                     }
