@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT u.id, u.username\n        FROM users AS u\n        LEFT JOIN (\n            SELECT *\n            FROM subscriptions\n            WHERE subscriptions.book_id = $2\n        ) AS s ON u.id = s.user_id\n        WHERE LOWER(u.username) LIKE '%' || LOWER($1) || '%' AND s.user_id IS NULL\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "username",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "8be20fbdaa446a543f66c3008636961995658e40b44e10270a2b30c8e911d8ef"
+}

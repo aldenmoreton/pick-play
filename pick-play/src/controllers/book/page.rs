@@ -52,8 +52,12 @@ pub async fn leaderboard(
 
                 tbody {
                     @for (i, rank) in rankings.iter().enumerate() {
-                        tr class="bg-white" {
-                            td class="px-6 py-4" {(i + 1)}
+                        tr.text-blue-500[rank.username == "Guests"] class="bg-white" {
+                            @if rank.rank == i as i32 + 1 {
+                                td class="px-6 py-4" {(i + 1)}
+                            } @else {
+                                td {}
+                            }
                             td class="px-6 py-4" {
                                 (rank.username)
                                 br;

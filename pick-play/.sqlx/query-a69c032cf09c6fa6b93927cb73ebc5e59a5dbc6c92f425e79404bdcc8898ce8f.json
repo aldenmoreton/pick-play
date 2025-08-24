@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM picks WHERE book_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a69c032cf09c6fa6b93927cb73ebc5e59a5dbc6c92f425e79404bdcc8898ce8f"
+}

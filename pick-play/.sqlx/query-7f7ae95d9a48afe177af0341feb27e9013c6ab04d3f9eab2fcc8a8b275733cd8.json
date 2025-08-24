@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        WITH earned_points AS (\n            SELECT\n                user_id,\n                COALESCE(SUM(points), 0) AS points\n            FROM picks\n            WHERE book_id = $1\n            GROUP BY user_id\n        ),\n        added_points AS (\n            SELECT\n                user_id,\n                COALESCE(SUM(points), 0) AS points\n            FROM added_points\n            WHERE book_id = $1\n            GROUP BY user_id\n        ),\n        regular_users AS (\n            SELECT\n                users.id AS user_id,\n                users.username,\n                COALESCE(earned_points.points, 0) AS earned_points,\n                COALESCE(added_points.points, 0) AS added_points,\n                COALESCE(earned_points.points, 0) + COALESCE(added_points.points, 0) AS total_points\n            FROM subscriptions\n            JOIN users ON subscriptions.user_id = users.id\n            LEFT JOIN earned_points ON users.id = earned_points.user_id\n            LEFT JOIN added_points ON users.id = added_points.user_id\n            WHERE subscriptions.book_id = $1 AND NOT (subscriptions.role ? 'guest')\n        ),\n        guest_users AS (\n            SELECT\n                -1 AS user_id,  -- Special ID for guests group\n                'Guests' AS username,\n                COALESCE(SUM(earned_points.points), 0) AS earned_points,\n                COALESCE(SUM(added_points.points), 0) AS added_points,\n                COALESCE(SUM(earned_points.points), 0) + COALESCE(SUM(added_points.points), 0) AS total_points\n            FROM subscriptions\n            JOIN users ON subscriptions.user_id = users.id\n            LEFT JOIN earned_points ON users.id = earned_points.user_id\n            LEFT JOIN added_points ON users.id = added_points.user_id\n            WHERE subscriptions.book_id = $1 AND (subscriptions.role ? 'guest')\n        ),\n        combined AS (\n            SELECT * FROM regular_users\n            UNION ALL\n            SELECT * FROM guest_users\n            WHERE total_points > 0  -- Only include guests if they have points\n        )\n        SELECT\n            user_id AS \"user_id!\",\n            username AS \"username!\",\n            earned_points::INT AS \"earned_points!\",\n            added_points::INT AS \"added_points!\",\n            total_points::INT AS \"total_points!\",\n            RANK() OVER (ORDER BY total_points DESC)::INT AS \"rank!\"\n        FROM combined\n        ORDER BY total_points DESC;\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id!",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "username!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "earned_points!",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "added_points!",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "total_points!",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "rank!",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "7f7ae95d9a48afe177af0341feb27e9013c6ab04d3f9eab2fcc8a8b275733cd8"
+}

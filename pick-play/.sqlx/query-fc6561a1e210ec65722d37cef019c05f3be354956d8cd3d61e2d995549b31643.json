@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        DELETE FROM books\n        WHERE id = $1\n        ",
+  "query": "DELETE FROM chapters WHERE book_id = $1",
   "describe": {
     "columns": [],
     "parameters": {
@@ -10,5 +10,5 @@
     },
     "nullable": []
   },
-  "hash": "7e93633e5ad7628d330c3130a855e4d25aa8fdfaab6066a2784c6ea23b52a7e0"
+  "hash": "fc6561a1e210ec65722d37cef019c05f3be354956d8cd3d61e2d995549b31643"
 }

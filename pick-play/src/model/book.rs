@@ -225,33 +225,62 @@ pub async fn leaderboard(
         BookRankingStats,
         r#"
         WITH earned_points AS (
-           	SELECT
-          		user_id,
-          		COALESCE(SUM(points)::INT, 0) AS points
-           	FROM picks
-           	WHERE book_id = $1
-           	GROUP BY user_id
-        ), added_points AS (
-           	SELECT
-          		user_id,
-          		COALESCE(SUM(points)::INT, 0) AS points
-           	FROM added_points
-           	WHERE book_id = $1
-           	GROUP BY user_id
+            SELECT
+                user_id,
+                COALESCE(SUM(points), 0) AS points
+            FROM picks
+            WHERE book_id = $1
+            GROUP BY user_id
+        ),
+        added_points AS (
+            SELECT
+                user_id,
+                COALESCE(SUM(points), 0) AS points
+            FROM added_points
+            WHERE book_id = $1
+            GROUP BY user_id
+        ),
+        regular_users AS (
+            SELECT
+                users.id AS user_id,
+                users.username,
+                COALESCE(earned_points.points, 0) AS earned_points,
+                COALESCE(added_points.points, 0) AS added_points,
+                COALESCE(earned_points.points, 0) + COALESCE(added_points.points, 0) AS total_points
+            FROM subscriptions
+            JOIN users ON subscriptions.user_id = users.id
+            LEFT JOIN earned_points ON users.id = earned_points.user_id
+            LEFT JOIN added_points ON users.id = added_points.user_id
+            WHERE subscriptions.book_id = $1 AND NOT (subscriptions.role ? 'guest')
+        ),
+        guest_users AS (
+            SELECT
+                -1 AS user_id,  -- Special ID for guests group
+                'Guests' AS username,
+                COALESCE(SUM(earned_points.points), 0) AS earned_points,
+                COALESCE(SUM(added_points.points), 0) AS added_points,
+                COALESCE(SUM(earned_points.points), 0) + COALESCE(SUM(added_points.points), 0) AS total_points
+            FROM subscriptions
+            JOIN users ON subscriptions.user_id = users.id
+            LEFT JOIN earned_points ON users.id = earned_points.user_id
+            LEFT JOIN added_points ON users.id = added_points.user_id
+            WHERE subscriptions.book_id = $1 AND (subscriptions.role ? 'guest')
+        ),
+        combined AS (
+            SELECT * FROM regular_users
+            UNION ALL
+            SELECT * FROM guest_users
+            WHERE total_points > 0  -- Only include guests if they have points
         )
         SELECT
-           	users.id AS "user_id!",
-           	users.USERNAME AS "username!",
-           	COALESCE(earned_points.points, 0) AS "earned_points!",
-           	COALESCE(ADDED_POINTS.points, 0) AS "added_points!",
-           	COALESCE(earned_points.points, 0) + COALESCE(ADDED_POINTS.points, 0) AS "total_points!",
-           	RANK() OVER (ORDER BY COALESCE(earned_points.points, 0) + COALESCE(ADDED_POINTS.points, 0) DESC)::INT AS "rank!"
-        FROM subscriptions
-        JOIN users ON subscriptions.user_id = users.id
-        LEFT JOIN earned_points ON users.id = earned_points.user_id
-        LEFT JOIN added_points ON users.id = added_points.user_id
-        WHERE subscriptions.book_id = $1
-        ORDER BY "total_points!" DESC
+            user_id AS "user_id!",
+            username AS "username!",
+            earned_points::INT AS "earned_points!",
+            added_points::INT AS "added_points!",
+            total_points::INT AS "total_points!",
+            RANK() OVER (ORDER BY total_points DESC)::INT AS "rank!"
+        FROM combined
+        ORDER BY total_points DESC;
         "#,
         book_id
     ).fetch_all(pool).await
@@ -355,46 +384,28 @@ pub async fn remove_user_from_book(
     .map(|_| ())
 }
 
-pub async fn delete_book_cascade(
-    book_id: i32,
-    pool: &PgPool,
-) -> Result<(), sqlx::Error> {
+pub async fn delete_book_cascade(book_id: i32, pool: &PgPool) -> Result<(), sqlx::Error> {
     let mut transaction = pool.begin().await?;
 
-    sqlx::query!(
-        r#"DELETE FROM picks WHERE book_id = $1"#,
-        book_id
-    )
-    .execute(&mut *transaction)
-    .await?;
+    sqlx::query!(r#"DELETE FROM picks WHERE book_id = $1"#, book_id)
+        .execute(&mut *transaction)
+        .await?;
 
-    sqlx::query!(
-        r#"DELETE FROM events WHERE book_id = $1"#,
-        book_id
-    )
-    .execute(&mut *transaction)
-    .await?;
+    sqlx::query!(r#"DELETE FROM events WHERE book_id = $1"#, book_id)
+        .execute(&mut *transaction)
+        .await?;
 
-    sqlx::query!(
-        r#"DELETE FROM chapters WHERE book_id = $1"#,
-        book_id
-    )
-    .execute(&mut *transaction)
-    .await?;
+    sqlx::query!(r#"DELETE FROM chapters WHERE book_id = $1"#, book_id)
+        .execute(&mut *transaction)
+        .await?;
 
-    sqlx::query!(
-        r#"DELETE FROM subscriptions WHERE book_id = $1"#,
-        book_id
-    )
-    .execute(&mut *transaction)
-    .await?;
+    sqlx::query!(r#"DELETE FROM subscriptions WHERE book_id = $1"#, book_id)
+        .execute(&mut *transaction)
+        .await?;
 
-    sqlx::query!(
-        r#"DELETE FROM books WHERE id = $1"#,
-        book_id
-    )
-    .execute(&mut *transaction)
-    .await?;
+    sqlx::query!(r#"DELETE FROM books WHERE id = $1"#, book_id)
+        .execute(&mut *transaction)
+        .await?;
 
     transaction.commit().await?;
     Ok(())
